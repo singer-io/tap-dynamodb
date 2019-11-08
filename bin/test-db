@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+import os
+import sys
+import argparse
+import subprocess
+from argparse import RawTextHelpFormatter
+
+def start_container(name):
+    START_COMMAND = """
+    docker run -p 8000:8000 -d --name {} amazon/dynamodb-local
+    """.format(name)
+
+    print("Starting Docker process {} using container: amazon/dynamodb-local".format(name))
+    proc = subprocess.run(START_COMMAND, shell=True)
+    if proc.returncode != 0:
+        sys.exit("Exited with code: {}, the docker process failed to start.".format(proc.returncode))
+    print("Process started successfully, connect on localhost port 8000")
+
+def stop_container(name):
+    STOP_COMMAND = "sudo docker stop {0} && sudo docker rm {0}"
+
+    print("Stopping Docker process {}".format(name))
+    proc = subprocess.run(STOP_COMMAND.format(name), shell=True)
+    if proc.returncode != 0:
+        sys.exit("Exited with code: {}, the docker process failed to stop.".format(proc.returncode))
+    print("Process stopped successfully")
+
+DESCRIPTION = """
+Manage docker instance for tap-dynamodb testing.
+"""
+parser = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=RawTextHelpFormatter)
+parser.add_argument('action', choices=['start','stop'], help='action to perform with the container')
+parser.add_argument('--name', help="name assigned to running docker process", default='dynamodb1')
+
+def main():
+    parsed_args = parser.parse_args()
+    # Potential arguments to add: pull, changing docker cointainer, changing password
+    if parsed_args.action == 'start':
+        start_container(parsed_args.name)
+    elif parsed_args.action == 'stop':
+        stop_container(parsed_args.name)
+
+if __name__ == "__main__":
+    main()
