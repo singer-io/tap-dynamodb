@@ -13,9 +13,19 @@ def random_string_generator(size=6, chars=string.ascii_uppercase + string.digits
     return ''.join(random.choice(chars) for x in range(size))
 
 def clear_tables(dynamodb):
-    for table in dynamodb.tables.all():
-        print('Deleting table: {}'.format(table.name))
+    try:
+        table = dynamodb.Table('simple_table')
         table.delete()
+    except:
+        pass
+
+    try:
+        table = dynamodb.Table('movies')
+        table.delete()
+    except:
+        pass
+
+
 
 def create_simple_table(dynamodb):
     print('\nCreating table: simple_table')
@@ -43,7 +53,7 @@ def create_simple_table(dynamodb):
             {
                 'AttributeName': 'date_field',
                 'AttributeType': 'S'
-            },  
+            },
 
         ],
         ProvisionedThroughput={
@@ -119,7 +129,7 @@ def scan_simple_table(dynamodb):
         print(' {}, {}, {} '.format(simple_item['id'],
                                     simple_item['string_field'],
                                     simple_item['date_field']))
-        
+
 def create_movies(dynamodb):
     print('\nCreating table: movies')
     table = dynamodb.create_table(
@@ -142,7 +152,7 @@ def create_movies(dynamodb):
             {
                 'AttributeName': 'title',
                 'AttributeType': 'S'
-            },  
+            },
         ],
         ProvisionedThroughput={
             'ReadCapacityUnits': 100,
@@ -150,7 +160,7 @@ def create_movies(dynamodb):
         }
     )
     print('Finished creating table: movies')
-    
+
 def populate_movies(dynamodb):
     print('\nPopulating table: movies')
     table = dynamodb.Table('movies')
@@ -196,9 +206,9 @@ def scan_movies(dynamodb):
 
 
 def main():
-    dynamodb = boto3.resource('dynamodb',
-                              endpoint_url='http://localhost:8000',
-                              region_name='us-east-1')
+    dynamodb = boto3.resource('dynamodb')
+                              #endpoint_url='http://localhost:8000',
+                              #region_name='us-east-1')
     clear_tables(dynamodb)
     create_simple_table(dynamodb)
     populate_simple_table(dynamodb)
