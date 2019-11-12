@@ -210,7 +210,7 @@ def main():
         query_movies(dynamodb)
         scan_movies(dynamodb)
     else:
-        print('\nError: did not find moviedata.json file to load, will not create movies table')
+        print('\nError: did not find moviedata.json file to load, will not create movies table. Can download moviedata.json at https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/samples/moviedata.zip')
 
 if __name__ == "__main__":
     main()
