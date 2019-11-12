@@ -28,6 +28,11 @@ def clear_tables(dynamodb):
 
 
 def create_simple_table(dynamodb):
+    print('\nWaiting until table is deleted')
+
+    table = dynamodb.Table('simple_table')
+    table.wait_until_not_exists()
+
     print('\nCreating table: simple_table')
     table = dynamodb.create_table(
         TableName='simple_table',
@@ -57,8 +62,8 @@ def create_simple_table(dynamodb):
 
         ],
         ProvisionedThroughput={
-            'ReadCapacityUnits': 100,
-            'WriteCapacityUnits': 100
+            'ReadCapacityUnits': 1,
+            'WriteCapacityUnits': 1
         },
         GlobalSecondaryIndexes=[
             {
@@ -73,11 +78,15 @@ def create_simple_table(dynamodb):
                     'ProjectionType': 'ALL'
                 },
                 'ProvisionedThroughput': {
-                    'ReadCapacityUnits': 100,
-                    'WriteCapacityUnits': 100
+                    'ReadCapacityUnits': 1,
+                    'WriteCapacityUnits': 1
                 }
             }
-        ]
+        ],
+        StreamSpecification={
+            'StreamEnabled': True,
+            'StreamViewType': 'NEW_IMAGE'
+        }
     )
     print('Finished creating table: simple_table')
 
@@ -85,6 +94,7 @@ def populate_simple_table(dynamodb):
     print('\nPopulating table: simple_table')
     num_items = 50
     table = dynamodb.Table('simple_table')
+    table.wait_until_exists()
     start_datetime = datetime.datetime(2018, 1, 1, 0, 0, 0, 0,
                                        tzinfo=datetime.timezone.utc)
     for int_value in range(num_items):
@@ -112,8 +122,7 @@ def query_simple_table(dynamodb):
     table = dynamodb.Table('simple_table')
     print('\nRetrieving items with date_field=1/1/2018')
     response = table.query(
-        IndexName='date_index',
-        KeyConditionExpression=boto3.dynamodb.conditions.Key('date_field').eq('2018-01-01T00:00:00.000000Z'))
+        KeyConditionExpression=boto3.dynamodb.conditions.Key('id').eq(0))
     for simple_item in response.get('Items', []):
         print(' {}, {}, {} '.format(simple_item['id'],
                                     simple_item['string_field'],
@@ -122,13 +131,31 @@ def query_simple_table(dynamodb):
 def scan_simple_table(dynamodb):
     table = dynamodb.Table('simple_table')
     print('\nRetrieving items with date_field > 2018-03-01T00:00:00.000000Z')
-    response = table.scan(
-        IndexName='date_index',
-        FilterExpression=boto3.dynamodb.conditions.Attr('date_field').gt('2018-03-01T00:00:00.000000Z'))
+    response = table.scan()
+
     for simple_item in response.get('Items', []):
         print(' {}, {}, {} '.format(simple_item['id'],
                                     simple_item['string_field'],
                                     simple_item['date_field']))
+
+def get_stream(dynamodb):
+    table = dynamodb.Table('simple_table')
+    stream_arn = table.latest_stream_arn
+    client = boto3.client('dynamodbstreams',
+                          endpoint_url='http://localhost:8000',
+                          region_name='us-east-1')
+
+    selected_tables = set(['simple_table'])
+    stream_list = client.list_streams()
+    for streamarn in (x['StreamArn'] for x in stream_list['Streams'] if x['TableName'] in selected_tables):
+        stream_info = client.describe_stream(StreamArn=streamarn)
+        for shard in stream_info['StreamDescription']['Shards']:
+            shard_iterator = client.get_shard_iterator(StreamArn = streamarn,
+                                                       ShardId = shard['ShardId'],
+                                                       ShardIteratorType = 'TRIM_HORIZON')
+
+            records = client.get_records(ShardIterator=shard_iterator['ShardIterator'])
+            record_values = [x['dynamodb']['NewImage'] for x in records['Records']]
 
 def create_movies(dynamodb):
     print('\nCreating table: movies')
@@ -155,8 +182,8 @@ def create_movies(dynamodb):
             },
         ],
         ProvisionedThroughput={
-            'ReadCapacityUnits': 100,
-            'WriteCapacityUnits': 100
+            'ReadCapacityUnits': 1,
+            'WriteCapacityUnits': 1
         }
     )
     print('Finished creating table: movies')
@@ -206,21 +233,26 @@ def scan_movies(dynamodb):
 
 
 def main():
-    dynamodb = boto3.resource('dynamodb')
-                              #endpoint_url='http://localhost:8000',
-                              #region_name='us-east-1')
-    clear_tables(dynamodb)
-    create_simple_table(dynamodb)
+    dynamodb = boto3.resource('dynamodb',
+                              endpoint_url='http://localhost:8000',
+                              region_name='us-east-1')
+    #clear_tables(dynamodb)
+    #create_simple_table(dynamodb)
     populate_simple_table(dynamodb)
-    query_simple_table(dynamodb)
-    scan_simple_table(dynamodb)
-    if  os.path.exists('moviedata.json'):
-        create_movies(dynamodb)
-        populate_movies(dynamodb)
-        query_movies(dynamodb)
-        scan_movies(dynamodb)
-    else:
-        print('\nError: did not find moviedata.json file to load, will not create movies table. Can download moviedata.json at https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/samples/moviedata.zip')
+    populate_simple_table(dynamodb)
+    populate_simple_table(dynamodb)
+    populate_simple_table(dynamodb)
+    get_stream(dynamodb)
+    #query_simple_table(dynamodb)
+    # for i in range(100):
+    #     scan_simple_table(dynamodb)
+    # if  os.path.exists('moviedata.json'):
+    #     create_movies(dynamodb)
+    #     populate_movies(dynamodb)
+    #     query_movies(dynamodb)
+    #     scan_movies(dynamodb)
+    # else:
+    #     print('\nError: did not find moviedata.json file to load, will not create movies table. Can download moviedata.json at https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/samples/moviedata.zip')
 
 if __name__ == "__main__":
     main()
