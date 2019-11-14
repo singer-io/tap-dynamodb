@@ -140,6 +140,7 @@ def scan_simple_table(dynamodb):
 
 def get_stream(dynamodb):
     table = dynamodb.Table('simple_table')
+
     stream_arn = table.latest_stream_arn
     client = boto3.client('dynamodbstreams',
                           endpoint_url='http://localhost:8000',
@@ -153,9 +154,41 @@ def get_stream(dynamodb):
             shard_iterator = client.get_shard_iterator(StreamArn = streamarn,
                                                        ShardId = shard['ShardId'],
                                                        ShardIteratorType = 'TRIM_HORIZON')
+            records = handle_shard_iterator(client, shard_iterator['ShardIterator'])
 
-            records = client.get_records(ShardIterator=shard_iterator['ShardIterator'])
-            record_values = [x['dynamodb']['NewImage'] for x in records['Records']]
+
+def get_latest_seq_number(dynamodb):
+    table = dynamodb.Table('simple_table')
+
+    stream_arn = table.latest_stream_arn
+    client = boto3.client('dynamodbstreams',
+                          endpoint_url='http://localhost:8000',
+                          region_name='us-east-1')
+
+    selected_tables = set(['simple_table'])
+    stream_list = client.list_streams()
+    for streamarn in (x['StreamArn'] for x in stream_list['Streams'] if x['TableName'] in selected_tables):
+        stream_info = client.describe_stream(StreamArn=streamarn)
+        last_shard = stream_info['StreamDescription']['Shards'][-1]
+        shard_iterator = client.get_shard_iterator(StreamArn = streamarn,
+                                                   ShardId = last_shard['ShardId'],
+                                                   ShardIteratorType = 'TRIM_HORIZON')
+
+
+        records = handle_shard_iterator(client, shard_iterator['ShardIterator'])
+        import ipdb; ipdb.set_trace()
+        1+1
+
+
+def handle_shard_iterator(client, shard_iterator):
+    records = client.get_records(ShardIterator=shard_iterator)
+    record_values = [x['dynamodb'] for x in records['Records']]
+
+    if len(records['Records']) == 1000 and records.get('NextShardIterator'):
+        record_values += handle_shard_iterator(client, records.get('NextShardIterator'))
+
+    return record_values
+
 
 def create_movies(dynamodb):
     print('\nCreating table: movies')
@@ -242,7 +275,8 @@ def main():
     populate_simple_table(dynamodb)
     populate_simple_table(dynamodb)
     populate_simple_table(dynamodb)
-    get_stream(dynamodb)
+    #get_stream(dynamodb)
+    get_latest_seq_number(dynamodb)
     #query_simple_table(dynamodb)
     # for i in range(100):
     #     scan_simple_table(dynamodb)
