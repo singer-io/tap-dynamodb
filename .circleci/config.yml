@@ -1,0 +1,49 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester
+      - image: amazon/dynamodb-local
+    steps:
+      - checkout
+      - add_ssh_keys
+      - run:
+          name: 'Setup virtual env'
+          command: |
+            virtualenv -p python3 /usr/local/share/virtualenvs/tap-dynamodb
+            source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
+            pip install .[dev]
+      - run:
+          name: 'pylint'
+          command: |
+            source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
+            make test
+      - run:
+          name: 'Tap Tester'
+          command: |
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox tap-tester.env
+            source tap-tester.env
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            cd /root/project/
+            run-a-test --tap=tap-mongodb \
+                       --target=target-stitch \
+                       --orchestrator=stitch-orchestrator \
+                       --email=harrison+sandboxtest@stitchdata.com \
+                       --password=$SANDBOX_PASSWORD \
+                       --client-id=50 \
+                       tap_tester.suites.dynamodb
+workflows:
+  version: 2
+  commit:
+    jobs:
+      - build
+  build_daily:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - build

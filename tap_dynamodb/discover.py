@@ -39,5 +39,5 @@ def discover_streams(config):
         table_list += response.get('TableNames')
 
     streams = [discover_table_schema(client, table) for table in table_list]
-            
+
     return streams
