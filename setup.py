@@ -10,9 +10,10 @@ setup(
     classifiers=["Programming Language :: Python :: 3 :: Only"],
     py_modules=["tap_dynamodb"],
     install_requires=[
+        'boto3==1.9.57',
         "singer-python==5.9.0",
         'terminaltables==3.1.0',
-        'boto3==1.10.14',
+        'backoff==1.8.0',
     ],
     extras_require={
         'dev': [
