@@ -24,7 +24,7 @@ def discover_table_schema(client, table_name):
 
 
 def discover_streams(config):
-    if config.get('DEBUG_use_local_dynamo'):
+    if config.get('use_local_dynamo'):
         client = boto3.client('dynamodb', endpoint_url='http://localhost:8000')
     else:
         client = boto3.client('dynamodb')

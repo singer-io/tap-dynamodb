@@ -58,7 +58,7 @@ def main():
 
 
     # TODO Is this the right way to do this? It seems bad
-    if not config.get("DEBUG_use_local_dynamo"):
+    if not config.get('use_local_dynamo'):
         setup_aws_client(config)
 
     if args.discover:
