@@ -25,7 +25,7 @@ jobs:
             source tap-tester.env
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             cd /root/project/
-            run-a-test --tap=tap-mongodb \
+            run-a-test --tap=tap-dynamodb \
                        --target=target-stitch \
                        --orchestrator=stitch-orchestrator \
                        --email=harrison+sandboxtest@stitchdata.com \
