@@ -1,8 +1,9 @@
 import boto3
 from singer import metadata
+from tap_dynamodb import client
 
-def discover_table_schema(client, table_name):
-    table_info = client.describe_table(TableName=table_name).get('Table', {})
+def discover_table_schema(dynamodb, table_name):
+    table_info = dynamodb.describe_table(TableName=table_name).get('Table', {})
 
     # write stream metadata
     mdata = {}
@@ -24,20 +25,17 @@ def discover_table_schema(client, table_name):
 
 
 def discover_streams(config):
-    if config.get('use_local_dynamo'):
-        client = boto3.client('dynamodb', endpoint_url='http://localhost:8000', region_name='us-east-1')
-    else:
-        client = boto3.client('dynamodb')
+    dynamodb = client.get_client(config)
 
-    response = client.list_tables()
+    response = dynamodb.list_tables()
 
     lastEvaluatedTableName = response.get('LastEvaluatedTableName', None)
     table_list = response.get('TableNames')
     while lastEvaluatedTableName is not None:
-        response = client.list_tables()
+        response = dynamodb.list_tables()
         lastEvaluatedTableName = response.get('LastEvaluatedTableName', None)
         table_list += response.get('TableNames')
 
-    streams = [discover_table_schema(client, table) for table in table_list]
+    streams = [discover_table_schema(dynamodb, table) for table in table_list]
 
     return streams

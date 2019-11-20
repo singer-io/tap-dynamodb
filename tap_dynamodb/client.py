@@ -63,3 +63,9 @@ def setup_aws_client(config):
 
     LOGGER.info("Attempting to assume_role on RoleArn: %s", role_arn)
     boto3.setup_default_session(botocore_session=refreshable_session)
+
+def get_client(config):
+    if config.get('use_local_dynamo'):
+        return boto3.client('dynamodb', endpoint_url='http://localhost:8000', region_name='us-east-1')
+    else:
+        return boto3.client('dynamodb')
