@@ -1,10 +1,9 @@
 import boto3
-#from boto3.dynamodb.types import TypeDeserializer, Binary
 import time
 from singer import metadata
 import singer
 from tap_dynamodb import client
-from tap_dynamodb.types import Deserializer
+from tap_dynamodb.deserialize import Deserializer
 
 LOGGER = singer.get_logger()
 
@@ -100,11 +99,9 @@ def sync_full_table(config, state, stream):
                                              stream['tap_stream_id'],
                                              'last_evaluated_key')
 
-    # TODO Retrieve projection from metadata
     md_map = metadata.to_map(stream['metadata'])
     projection = metadata.get(md_map, (), 'tap-mongodb.projection')
 
-    # Query
     dynamodb = client.get_client(config)
     rows_saved = 0
 
@@ -114,7 +111,7 @@ def sync_full_table(config, state, stream):
             rows_saved += 1
             # TODO: Do we actually have to put the item we retreive from
             # dynamo into a map before we can deserialize?
-            record_message = deserializer.deserialize({'M': item})
+            record_message = deserializer.deserialize_item({'M': item})
             singer.write_record(stream['tap_stream_id'], record_message)
         if result.get('LastEvaluatedKey'):
             state = singer.write_bookmark(state, stream['tap_stream_id'], 'last_evaluated_key', result.get('LastEvaluatedKey'))

@@ -9,6 +9,10 @@ class Deserializer(TypeDeserializer):
     free (ie handling nested data) while allowing us to redefine how to
     handle binary data and sets
     '''
+
+    def deserialize_item(self, item):
+       return self.deserialize({'M': item}) 
+
     def _deserialize_b(self, value):
         '''
         Deserializes binary data as a base64 encoded string because that's how
