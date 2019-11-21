@@ -39,12 +39,13 @@ def sync_stream(config, state, stream):
 def scan_table(table_name, projection, last_evaluated_key, config):
     scan_params = {
         'TableName': table_name,
+        'Limit': 1000
     }
 
     if projection is not None:
         scan_params['ProjectionExpression'] = projection
     if last_evaluated_key is not None:
-        scan_params['ExclusiveStartKey'] = projection
+        scan_params['ExclusiveStartKey'] = last_evaluated_key
 
     dynamodb = client.get_client(config)
     has_more = True
@@ -52,6 +53,10 @@ def scan_table(table_name, projection, last_evaluated_key, config):
     while has_more:
         result = dynamodb.scan(**scan_params)
         yield result
+
+        if result.get('LastEvaluatedKey'):
+            scan_params['ExclusiveStartKey'] = result['LastEvaluatedKey']
+
         has_more = result.get('LastEvaluatedKey', False)
 
 def transform_item(item, stream):
@@ -96,7 +101,8 @@ def sync_full_table(config, state, stream):
                                              'last_evaluated_key')
 
     # TODO Retrieve projection from metadata
-    projection = None
+    md_map = metadata.to_map(stream['metadata'])
+    projection = metadata.get(md_map, (), 'tap-mongodb.projection')
 
     # Query
     dynamodb = client.get_client(config)
@@ -117,9 +123,9 @@ def sync_full_table(config, state, stream):
     state = singer.clear_bookmark(state, stream['tap_stream_id'], 'last_evaluated_key')
 
     state = singer.write_bookmark(state,
-                          stream['tap_stream_id'],
-                          'initial_full_table_complete',
-                          True)
+                                  stream['tap_stream_id'],
+                                  'initial_full_table_complete',
+                                  True)
 
     singer.write_state(state)
 
