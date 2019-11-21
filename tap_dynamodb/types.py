@@ -5,7 +5,7 @@ class Deserializer(TypeDeserializer):
     '''
     This class inherits from boto3.dynamodb.types.TypeDeserializer
     https://boto3.amazonaws.com/v1/documentation/api/latest/_modules/boto3/dynamodb/types.html
-    By inheriting from TypeDeserializer we got a lot of functionality for
+    By extending TypeDeserializer we get a lot of functionality for
     free (ie handling nested data) while allowing us to redefine how to
     handle binary data and sets
     '''

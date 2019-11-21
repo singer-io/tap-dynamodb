@@ -106,6 +106,8 @@ def sync_full_table(config, state, stream):
     for result in scan_table(stream['tap_stream_id'], projection, last_evaluated_key, config):
         for item in result.get('Items', []):
             rows_saved += 1
+            # TODO: Do we actually have to put the item we retreive from
+            # dynamo into a map before we can deserialize?
             record_message = deserializer.deserialize({'M': item})
             singer.write_record(stream['tap_stream_id'], record_message)
         if result.get('LastEvaluatedKey'):
