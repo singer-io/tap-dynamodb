@@ -3,7 +3,7 @@ import time
 
 import singer
 from singer import metadata
-from tap_dynamodb import client
+from tap_dynamodb import dynamodb
 from tap_dynamodb.deserialize import Deserializer
 
 LOGGER = singer.get_logger()
@@ -19,11 +19,11 @@ def scan_table(table_name, projection, last_evaluated_key, config):
     if last_evaluated_key is not None:
         scan_params['ExclusiveStartKey'] = last_evaluated_key
 
-    dynamodb = client.get_client(config)
+    client = dynamodb.get_client(config)
     has_more = True
 
     while has_more:
-        result = dynamodb.scan(**scan_params)
+        result = client.scan(**scan_params)
         yield result
 
         if result.get('LastEvaluatedKey'):
@@ -71,7 +71,7 @@ def sync_full_table(config, state, stream):
     md_map = metadata.to_map(stream['metadata'])
     projection = metadata.get(md_map, (), 'tap-mongodb.projection')
 
-    dynamodb = client.get_client(config)
+    client = dynamodb.get_client(config)
     rows_saved = 0
 
     deserializer = Deserializer()
