@@ -25,9 +25,10 @@ def sync_stream(config, state, stream):
         schema=stream['schema'],
         key_properties=key_properties))
 
+    rows_saved = 0
     if replication_method == 'FULL_TABLE':
         LOGGER.info("Syncing full table for stream: %s", table_name)
-        sync_full_table(config, state, stream)
+        rows_saved += sync_full_table(config, state, stream)
     elif replication_method == 'LOG_BASED':
         LOGGER.info("Syncing log based for stream: %s", table_name)
 
@@ -47,8 +48,10 @@ def sync_stream(config, state, stream):
                 latest_sequence_numbers = get_latest_seq_numbers(config, stream)
                 state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', latest_sequence_numbers)
 
-            sync_full_table(config, state, stream)
+            rows_saved += sync_full_table(config, state, stream)
 
-        sync_log_based(config, state, stream)
+        rows_saved += sync_log_based(config, state, stream)
     else:
         LOGGER.info('Unknown replication method: %s for stream: %s', replication_method, table_name)
+
+    return rows_saved

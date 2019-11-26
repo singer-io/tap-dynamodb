@@ -8,6 +8,8 @@ from tap_dynamodb import deserialize
 LOGGER = singer.get_logger()
 WRITE_STATE_PERIOD = 1000
 
+SDC_DELETED_AT = "_sdc_deleted_at"
+
 def get_shards(streams_client, stream_arn, open_shards_only=False):
     params = {
         'StreamArn': stream_arn
@@ -46,6 +48,7 @@ def get_shard_records(streams_client, stream_arn, shard, shard_iterator_type, se
     has_more = True
 
     while has_more:
+
         records = streams_client.get_records(ShardIterator=shard_iterator, Limit=limit)
 
         for record in records['Records']:
@@ -68,7 +71,9 @@ def get_latest_seq_numbers(config, stream):
     stream_arn = table['LatestStreamArn']
 
     sequence_number_bookmarks = {}
+    LOGGER.info('Retreiving records from stream %s', stream_arn)
     for shard in get_shards(streams_client, stream_arn, True):
+        LOGGER.info('\tRetreiving records from shard %s', shard['ShardId'])
         has_records = False
         for record in get_shard_records(streams_client, stream_arn, shard, 'TRIM_HORIZON'):
             has_records = True
@@ -110,9 +115,14 @@ def sync_log_based(config, state, stream):
             iterator_type = 'TRIM_HORIZON'
 
         for record in get_shard_records(streams_client, stream_arn, shard, iterator_type, seq_number):
-            record_message = deserializer.deserialize_item(record['dynamodb']['NewImage'])
-            if projection is not None:
-                record_message = deserializer.apply_projection(record_message, projection)
+            if record['eventName'] == 'REMOVE':
+                record_message = deserializer.deserialize_item(record['dynamodb']['Keys'])
+                record_message[SDC_DELETED_AT] = singer.utils.strftime(record['dynamodb']['ApproximateCreationDateTime'])
+            else:
+                record_message = deserializer.deserialize_item(record['dynamodb']['NewImage'])
+                if projection is not None:
+                    record_message = deserializer.apply_projection(record_message, projection)
+
             singer.write_record(table_name, record_message)
             rows_saved += 1
 
@@ -133,7 +143,7 @@ def sync_log_based(config, state, stream):
 
         singer.write_state(state)
 
-        LOGGER.info('Synced %s records for %s', rows_saved, table_name)
+    return rows_saved
 
 def has_stream_aged_out(config, state, stream):
     # TODO Check if the beginning sequence number can move. If it cannot this > check is useless
@@ -143,10 +153,10 @@ def has_stream_aged_out(config, state, stream):
 
     client = dynamodb.get_client(config)
     streams_client = dynamodb.get_stream_client(config)
-    table = client.describe_table(TableName=stream['tap_stream_id'])
+    table = client.describe_table(TableName=stream['tap_stream_id'])['Table']
 
     stream_arn = table['LatestStreamArn']
-    shard_beg_seq_num =  {x['ShardId']: x['SequenceNumberRange']['BeginningSequenceNumber'] for x in get_shards(streams_client, stream_arn)}
+    shard_beg_seq_num =  {x['ShardId']: x['SequenceNumberRange']['StartingSequenceNumber'] for x in get_shards(streams_client, stream_arn)}
 
     for shard_id, shard_bookmark in seq_number_bookmarks.items():
         if shard_beg_seq_num.get(shard_id) is None or shard_beg_seq_num[shard_id] > shard_bookmark:

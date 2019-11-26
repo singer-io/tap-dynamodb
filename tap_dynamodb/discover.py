@@ -1,4 +1,3 @@
-import boto3
 from singer import metadata
 from tap_dynamodb import dynamodb
 

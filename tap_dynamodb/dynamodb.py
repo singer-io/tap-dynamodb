@@ -67,11 +67,9 @@ def setup_aws_client(config):
 def get_client(config):
     if config.get('use_local_dynamo'):
         return boto3.client('dynamodb', endpoint_url='http://localhost:8000', region_name='us-east-1')
-    else:
-        return boto3.client('dynamodb')
+    return boto3.client('dynamodb')
 
 def get_stream_client(config):
     if config.get('use_local_dynamo'):
         return boto3.client('dynamodbstreams', endpoint_url='http://localhost:8000', region_name='us-east-1')
-    else:
-        return boto3.client('dynamodbstreams')
+    return boto3.client('dynamodbstreams')

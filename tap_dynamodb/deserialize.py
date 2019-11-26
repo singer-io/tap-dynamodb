@@ -1,6 +1,5 @@
 import base64
 from boto3.dynamodb.types import TypeDeserializer
-import re
 
 class Deserializer(TypeDeserializer):
     '''
@@ -12,7 +11,7 @@ class Deserializer(TypeDeserializer):
     '''
 
     def deserialize_item(self, item):
-       return self.deserialize({'M': item}) 
+        return self.deserialize({'M': item})
 
     def _deserialize_b(self, value):
         '''
@@ -57,16 +56,16 @@ class Deserializer(TypeDeserializer):
                 index = int(breadcrumb[0].split('[')[1].split(']')[0])
                 if output.get(breadcrumb_key) is None:
                     output[breadcrumb_key] = [{}]
-                apply_projection(record[breadcrumb_key][index], breadcrumb[1:], output[breadcrumb_key][0])
+                self._apply_projection(record[breadcrumb_key][index], breadcrumb[1:], output[breadcrumb_key][0])
             else:
                 if output.get(breadcrumb[0]) is None:
                     output[breadcrumb[0]] = {}
-                apply_projection(record[breadcrumb[0]], breadcrumb[1:], output[breadcrumb[0]])
+                self._apply_projection(record[breadcrumb[0]], breadcrumb[1:], output[breadcrumb[0]])
 
     def apply_projection(self, record, projections):
         output = {}
 
         for breadcrumb in projections:
-            _apply_projection(record, breadcrumb, output)
+            self._apply_projection(record, breadcrumb, output)
 
         return output

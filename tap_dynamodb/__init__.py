@@ -1,11 +1,14 @@
 import json
 import sys
 import singer
+import time
 
+from terminaltables import AsciiTable
 from singer import metadata
 from tap_dynamodb.discover import discover_streams
 from tap_dynamodb.dynamodb import setup_aws_client
 from tap_dynamodb.sync import sync_stream
+
 
 LOGGER = singer.get_logger()
 
@@ -26,7 +29,10 @@ def stream_is_selected(mdata):
 def do_sync(config, catalog, state):
     LOGGER.info('Starting sync.')
 
+    counts = {}
+    sync_times = {}
     for stream in catalog['streams']:
+        start_time = time.time()
         stream_name = stream['tap_stream_id']
         mdata = metadata.to_map(stream['metadata'])
         if not stream_is_selected(mdata):
@@ -38,10 +44,39 @@ def do_sync(config, catalog, state):
         singer.write_schema(stream_name, stream['schema'], key_properties)
 
         LOGGER.info("%s: Starting sync", stream_name)
-        counter_value = sync_stream(config, state, stream)
-        LOGGER.info("%s: Completed sync (%s rows)", stream_name, counter_value)
+        counts[stream_name] = sync_stream(config, state, stream)
+        sync_times[stream_name] = time.time() - start_time
+        LOGGER.info("%s: Completed sync (%s rows)", stream_name, counts[stream_name])
 
+    LOGGER.info(get_sync_summary(catalog, counts, sync_times))
     LOGGER.info('Done syncing.')
+
+def get_sync_summary(catalog, counts, times):
+    headers = [['table name',
+                'replication method',
+                'total records',
+                'write speed']]
+
+    rows = []
+    for stream_id, stream_count in counts.items():
+        stream = [x for x in catalog['streams'] if x['tap_stream_id'] == stream_id][0]
+        md_map = metadata.to_map(stream['metadata'])
+        replication_method = metadata.get(md_map, (), 'replication-method')
+
+        stream_time = times[stream_id]
+        if stream_time == 0:
+            stream_time = 0.000001
+        row = [stream_id,
+               replication_method,
+               '{} records'.format(stream_count),
+               '{:.1f} records/second'.format(stream_count/stream_time)]
+        rows.append(row)
+
+    data = headers + rows
+    table = AsciiTable(data, title='Sync Summary')
+
+    return '\n\n' + table.table
+
 
 @singer.utils.handle_top_exception(LOGGER)
 def main():

@@ -23,6 +23,10 @@ def scan_table(table_name, projection, last_evaluated_key, config):
     has_more = True
 
     while has_more:
+        LOGGER.info('Scanning table %s with params:', table_name)
+        for key, value in scan_params.items():
+            LOGGER.info('\t%s = %s', key, value)
+
         result = client.scan(**scan_params)
         yield result
 
@@ -93,4 +97,4 @@ def sync_full_table(config, state, stream):
 
     singer.write_version(table_name, stream_version)
 
-    LOGGER.info('Synced {} records for {}'.format(rows_saved, table_name))
+    return rows_saved
