@@ -63,14 +63,10 @@ class Deserializer(TypeDeserializer):
                     output[breadcrumb[0]] = {}
                 apply_projection(record[breadcrumb[0]], breadcrumb[1:], output[breadcrumb[0]])
 
-    def transform_projection(self, projection, record):
-        projections = [x.strip() for x in projection.split(',')]
-        breadcrumbs = [x.split('.') for x in
-                    projections]
-
+    def apply_projection(self, record, projections):
         output = {}
-        for breadcrumb in breadcrumbs:
-            apply_projection(record, breadcrumb, output)
+
+        for breadcrumb in projections:
+            _apply_projection(record, breadcrumb, output)
 
         return output
-
