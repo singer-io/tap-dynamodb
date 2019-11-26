@@ -1,9 +1,9 @@
 import json
 import sys
-import singer
 import time
 
 from terminaltables import AsciiTable
+import singer
 from singer import metadata
 from tap_dynamodb.discover import discover_streams
 from tap_dynamodb.dynamodb import setup_aws_client
