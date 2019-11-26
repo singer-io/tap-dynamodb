@@ -1,4 +1,3 @@
-import boto3
 from singer import metadata
 import singer
 from tap_dynamodb.sync_strategies.full_table import sync_full_table
