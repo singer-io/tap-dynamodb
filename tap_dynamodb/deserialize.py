@@ -11,7 +11,7 @@ class Deserializer(TypeDeserializer):
     '''
 
     def deserialize_item(self, item):
-       return self.deserialize({'M': item}) 
+        return self.deserialize({'M': item})
 
     def _deserialize_b(self, value):
         '''
@@ -37,3 +37,35 @@ class Deserializer(TypeDeserializer):
         Deserializes sets as lists to allow JSON encoding
         '''
         return list(map(self._deserialize_b, value))
+
+    def _apply_projection(self, record, breadcrumb, output):
+        if len(breadcrumb) == 1:
+            if '[' in breadcrumb[0]:
+                breadcrumb_key = breadcrumb[0].split('[')[0]
+                index = int(breadcrumb[0].split('[')[1].split(']')[0])
+                if output.get(breadcrumb_key):
+                    output[breadcrumb_key].append(record[breadcrumb_key][index])
+                else:
+                    output[breadcrumb_key] = [record[breadcrumb_key][index]]
+
+            else:
+                output[breadcrumb[0]] = record[breadcrumb[0]]
+        else:
+            if '[' in breadcrumb[0]:
+                breadcrumb_key = breadcrumb[0].split('[')[0]
+                index = int(breadcrumb[0].split('[')[1].split(']')[0])
+                if output.get(breadcrumb_key) is None:
+                    output[breadcrumb_key] = [{}]
+                self._apply_projection(record[breadcrumb_key][index], breadcrumb[1:], output[breadcrumb_key][0])
+            else:
+                if output.get(breadcrumb[0]) is None:
+                    output[breadcrumb[0]] = {}
+                self._apply_projection(record[breadcrumb[0]], breadcrumb[1:], output[breadcrumb[0]])
+
+    def apply_projection(self, record, projections):
+        output = {}
+
+        for breadcrumb in projections:
+            self._apply_projection(record, breadcrumb, output)
+
+        return output

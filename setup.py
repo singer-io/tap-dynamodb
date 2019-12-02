@@ -26,7 +26,7 @@ setup(
     [console_scripts]
     tap-dynamodb=tap_dynamodb:main
     """,
-    packages=["tap_dynamodb"],
+    packages=["tap_dynamodb", 'tap_dynamodb.sync_strategies'],
     package_data = {},
     include_package_data=True,
 )

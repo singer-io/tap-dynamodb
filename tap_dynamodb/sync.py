@@ -1,14 +1,13 @@
-import boto3
-import time
 from singer import metadata
 import singer
-from tap_dynamodb import client
-from tap_dynamodb.deserialize import Deserializer
+from tap_dynamodb.sync_strategies.full_table import sync_full_table
+from tap_dynamodb.sync_strategies.log_based import sync_log_based, has_stream_aged_out, get_latest_seq_numbers
+
 
 LOGGER = singer.get_logger()
 
 def sync_stream(config, state, stream):
-    tap_stream_id = stream['tap_stream_id']
+    table_name = stream['tap_stream_id']
 
     md_map = metadata.to_map(stream['metadata'])
     replication_method = metadata.get(md_map, (), 'replication-method')
@@ -17,123 +16,41 @@ def sync_stream(config, state, stream):
     # TODO Clear state on replication method change?
 
     # write state message with currently_syncing bookmark
-    state = singer.set_currently_syncing(state, tap_stream_id)
+    state = singer.set_currently_syncing(state, table_name)
     singer.write_state(state)
 
     singer.write_message(singer.SchemaMessage(
-        stream=tap_stream_id,
+        stream=table_name,
         schema=stream['schema'],
         key_properties=key_properties))
 
-    if replication_method == 'FULL_TABLE':
-        LOGGER.info("Syncing full table for stream: %s", tap_stream_id)
-        sync_full_table(config, state, stream)
-    elif replication_method == 'LOG_BASED':
-        LOGGER.info("Syncing log based for stream: %s", tap_stream_id)
-        sync_log_based(config, state, stream)
-    else:
-        LOGGER.info('Unknown replication method: %s for stream: %s', replication_method, tap_stream_id)
-
-
-def scan_table(table_name, projection, last_evaluated_key, config):
-    scan_params = {
-        'TableName': table_name,
-        'Limit': 1000
-    }
-
-    if projection is not None:
-        scan_params['ProjectionExpression'] = projection
-    if last_evaluated_key is not None:
-        scan_params['ExclusiveStartKey'] = last_evaluated_key
-
-    dynamodb = client.get_client(config)
-    has_more = True
-
-    while has_more:
-        result = dynamodb.scan(**scan_params)
-        yield result
-
-        if result.get('LastEvaluatedKey'):
-            scan_params['ExclusiveStartKey'] = result['LastEvaluatedKey']
-
-        has_more = result.get('LastEvaluatedKey', False)
-
-def transform_item(item, stream):
-    deserializer = Deserializer()
-    return deserializer.deserialize({'M': item})
-
-def sync_full_table(config, state, stream):
-
-    #before writing the table version to state, check if we had one to begin with
-    first_run = singer.get_bookmark(state, stream['tap_stream_id'], 'version') is None
-
-    # last run was interrupted if there is a last_id_fetched bookmark
-    was_interrupted = singer.get_bookmark(state,
-                                          stream['tap_stream_id'],
-                                          'last_evaluated_key') is not None
-
-    #pick a new table version if last run wasn't interrupted
-    if was_interrupted:
-        stream_version = singer.get_bookmark(state, stream['tap_stream_id'], 'version')
-    else:
-        stream_version = int(time.time() * 1000)
-
-    state = singer.write_bookmark(state,
-                                  stream['tap_stream_id'],
-                                  'version',
-                                  stream_version)
-    singer.write_state(state)
-
-    activate_version_message = singer.ActivateVersionMessage(
-        stream=stream['tap_stream_id'],
-        version=stream_version
-    )
-
-    # For the initial replication, emit an ACTIVATE_VERSION message
-    # at the beginning so the records show up right away.
-    if first_run:
-        singer.write_message(activate_version_message)
-
-
-    last_evaluated_key = singer.get_bookmark(state,
-                                             stream['tap_stream_id'],
-                                             'last_evaluated_key')
-
-    md_map = metadata.to_map(stream['metadata'])
-    projection = metadata.get(md_map, (), 'tap-mongodb.projection')
-
-    dynamodb = client.get_client(config)
     rows_saved = 0
+    if replication_method == 'FULL_TABLE':
+        LOGGER.info("Syncing full table for stream: %s", table_name)
+        rows_saved += sync_full_table(config, state, stream)
+    elif replication_method == 'LOG_BASED':
+        LOGGER.info("Syncing log based for stream: %s", table_name)
 
-    deserializer = Deserializer()
-    for result in scan_table(stream['tap_stream_id'], projection, last_evaluated_key, config):
-        for item in result.get('Items', []):
-            rows_saved += 1
-            # TODO: Do we actually have to put the item we retreive from
-            # dynamo into a map before we can deserialize?
-            record_message = deserializer.deserialize_item({'M': item})
-            singer.write_record(stream['tap_stream_id'], record_message)
-        if result.get('LastEvaluatedKey'):
-            state = singer.write_bookmark(state, stream['tap_stream_id'], 'last_evaluated_key', result.get('LastEvaluatedKey'))
-            singer.write_state(state)
+        if has_stream_aged_out(config, state, stream):
+            LOGGER.info("Clearing state because stream has aged out")
+            state.get('bookmarks', {}).pop(table_name)
 
-    state = singer.clear_bookmark(state, stream['tap_stream_id'], 'last_evaluated_key')
+        # TODO Check to see if latest stream ARN has changed and wipe state if so
 
-    state = singer.write_bookmark(state,
-                                  stream['tap_stream_id'],
-                                  'initial_full_table_complete',
-                                  True)
+        if not singer.get_bookmark(state, table_name, 'initial_full_table_complete'):
+            msg = 'Must complete full table sync before replicating from dynamodb streams for %s'
+            LOGGER.info(msg, table_name)
 
-    singer.write_state(state)
+            # only mark latest sequence numbers in dynamo streams on first sync so
+            # tap has a starting point after the full table sync
+            if not singer.get_bookmark(state, table_name, 'version'):
+                latest_sequence_numbers = get_latest_seq_numbers(config, stream)
+                state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', latest_sequence_numbers)
 
-    singer.write_message(activate_version_message)
+            rows_saved += sync_full_table(config, state, stream)
 
-    LOGGER.info('Syncd {} records for {}'.format(rows_saved, stream['tap_stream_id']))
+        rows_saved += sync_log_based(config, state, stream)
+    else:
+        LOGGER.info('Unknown replication method: %s for stream: %s', replication_method, table_name)
 
-
-
-
-def sync_log_based(config, state, stream):
-    dynamodb = client.get_client(config)
-
-    pass
+    return rows_saved
