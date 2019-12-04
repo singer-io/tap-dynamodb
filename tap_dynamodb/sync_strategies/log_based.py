@@ -119,9 +119,16 @@ def sync_log_based(config, state, stream):
                 record_message = deserializer.deserialize_item(record['dynamodb']['Keys'])
                 record_message[SDC_DELETED_AT] = singer.utils.strftime(record['dynamodb']['ApproximateCreationDateTime'])
             else:
-                record_message = deserializer.deserialize_item(record['dynamodb']['NewImage'])
+                record_message = deserializer.deserialize_item(record['dynamodb'].get('NewImage'))
+                if record_message is None:
+                    LOGGER.fatal('Stream is not "NEW_IMAGE" or "NEW_AND_OLD_IMAGES". You must set the stream to either of these for log based replication to work.')
+                    raise Exception("Find a better exception class") # TODO <-
                 if projection is not None:
-                    record_message = deserializer.apply_projection(record_message, projection)
+                    try:
+                        record_message = deserializer.apply_projection(record_message, projection)
+                    except:
+                        LOGGER.fatal("Projection failed to apply: %s", metadata.get(md_map, (), 'tap-mongodb.projection'))
+                        raise Exception("Find a better exception class") # TODO <-
 
             singer.write_record(table_name, record_message)
             rows_saved += 1
