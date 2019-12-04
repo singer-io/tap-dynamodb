@@ -7,7 +7,7 @@ from argparse import RawTextHelpFormatter
 
 def start_container(name):
     START_COMMAND = """
-    docker run -p 8000:8000 -d --name {} amazon/dynamodb-local
+    docker run -p 8000:8000 -d --name {} amazon/dynamodb-local -jar DynamoDBLocal.jar -inMemory -sharedDb
     """.format(name)
 
     print("Starting Docker process {} using container: amazon/dynamodb-local".format(name))
