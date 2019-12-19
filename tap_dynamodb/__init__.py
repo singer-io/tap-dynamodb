@@ -12,7 +12,7 @@ from tap_dynamodb.sync import sync_stream
 
 LOGGER = singer.get_logger()
 
-REQUIRED_CONFIG_KEYS = ["account_id", "external_id", "role_name"]
+REQUIRED_CONFIG_KEYS = ["account_id", "external_id", "role_name", "region_name"]
 
 def do_discover(config):
     LOGGER.info("Starting discover")
