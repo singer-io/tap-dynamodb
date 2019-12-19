@@ -8,7 +8,6 @@ def discover_table_schema(client, table_name):
     mdata = {}
     key_props = [key_schema.get('AttributeName') for key_schema in table_info.get('KeySchema', [])]
     mdata = metadata.write(mdata, (), 'table-key-properties', key_props)
-    mdata = metadata.write(mdata, (), 'database-name', 'DynamoDB')
     if table_info.get('ItemCount'):
         mdata = metadata.write(mdata, (), 'row-count', table_info['ItemCount'])
 
