@@ -130,7 +130,11 @@ def sync_log_based(config, state, stream):
                         LOGGER.fatal("Projection failed to apply: %s", metadata.get(md_map, (), 'tap-mongodb.projection'))
                         raise RuntimeError('Projection failed to apply: {}'.format(metadata.get(md_map, (), 'tap-mongodb.projection')))
 
-            singer.write_record(table_name, record_message)
+            record_message = singer.RecordMessage(stream=table_name,
+                                                  record=record_message,
+                                                  version=stream_version)
+            singer.write_message(record_message)
+
             rows_saved += 1
 
             seq_number_bookmarks[shard['ShardId']] = record['dynamodb']['SequenceNumber']

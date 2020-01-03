@@ -83,15 +83,6 @@ def main():
     args = singer.utils.parse_args(REQUIRED_CONFIG_KEYS)
     config = args.config
 
-
-    # try:
-    #     for page in s3.list_files_in_bucket(config['bucket']):
-    #         break
-    #     LOGGER.warning("I have direct access to the bucket without assuming the configured role.")
-    # except:
-    #     client.setup_aws_client(config)
-
-
     # TODO Is this the right way to do this? It seems bad
     if not config.get('use_local_dynamo'):
         setup_aws_client(config)
