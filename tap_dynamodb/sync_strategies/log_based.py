@@ -116,22 +116,22 @@ def sync_log_based(config, state, stream):
 
         for record in get_shard_records(streams_client, stream_arn, shard, iterator_type, seq_number):
             if record['eventName'] == 'REMOVE':
-                record = deserializer.deserialize_item(record['dynamodb']['Keys'])
-                record[SDC_DELETED_AT] = singer.utils.strftime(record['dynamodb']['ApproximateCreationDateTime'])
+                record_message = deserializer.deserialize_item(record['dynamodb']['Keys'])
+                record_message[SDC_DELETED_AT] = singer.utils.strftime(record['dynamodb']['ApproximateCreationDateTime'])
             else:
-                record = deserializer.deserialize_item(record['dynamodb'].get('NewImage'))
-                if record is None:
+                record_message = deserializer.deserialize_item(record['dynamodb'].get('NewImage'))
+                if record_message is None:
                     LOGGER.fatal('Dynamo stream view type must be either "NEW_IMAGE" "NEW_AND_OLD_IMAGES"')
                     raise RuntimeError('Dynamo stream view type must be either "NEW_IMAGE" "NEW_AND_OLD_IMAGES"')
                 if projection is not None:
                     try:
-                        record = deserializer.apply_projection(record, projection)
+                        record_message = deserializer.apply_projection(record_message, projection)
                     except:
                         LOGGER.fatal("Projection failed to apply: %s", metadata.get(md_map, (), 'tap-mongodb.projection'))
                         raise RuntimeError('Projection failed to apply: {}'.format(metadata.get(md_map, (), 'tap-mongodb.projection')))
 
             record_message = singer.RecordMessage(stream=table_name,
-                                                  record=record,
+                                                  record=record_message,
                                                   version=stream_version)
             singer.write_message(record_message)
 
