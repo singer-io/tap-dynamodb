@@ -1,7 +1,7 @@
 from singer import metadata
 import singer
-from tap_dynamodb import dynamodb
 from botocore.exceptions import ClientError
+from tap_dynamodb import dynamodb
 
 LOGGER = singer.get_logger()
 
