@@ -80,8 +80,12 @@ def sync_full_table(config, state, stream):
             rows_saved += 1
             # TODO: Do we actually have to put the item we retreive from
             # dynamo into a map before we can deserialize?
-            record_message = deserializer.deserialize_item(item)
-            singer.write_record(table_name, record_message)
+            record = deserializer.deserialize_item(item)
+            record_message = singer.RecordMessage(stream=table_name,
+                                                  record=record,
+                                                  version=stream_version)
+
+            singer.write_message(record_message)
         if result.get('LastEvaluatedKey'):
             state = singer.write_bookmark(state, table_name, 'last_evaluated_key', result.get('LastEvaluatedKey'))
             singer.write_state(state)

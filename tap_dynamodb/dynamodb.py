@@ -42,6 +42,7 @@ class AssumeRoleProvider():
 def setup_aws_client(config):
     role_arn = "arn:aws:iam::{}:role/{}".format(config['account_id'].replace('-', ''),
                                                 config['role_name'])
+
     session = Session()
     fetcher = AssumeRoleCredentialFetcher(
         session.create_client,
@@ -49,7 +50,7 @@ def setup_aws_client(config):
         role_arn,
         extra_args={
             'DurationSeconds': 3600,
-            'RoleSessionName': 'TapS3CSV',
+            'RoleSessionName': 'TapDynamodDB',
             'ExternalId': config['external_id']
         },
         cache=JSONFileCache()
