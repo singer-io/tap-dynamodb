@@ -49,7 +49,7 @@ class Deserializer(TypeDeserializer):
                     output[breadcrumb_key] = [record[breadcrumb_key][index]]
 
             else:
-                output[breadcrumb[0]] = record.get(breadcrumb[0], {})
+                output[breadcrumb[0]] = record.get(breadcrumb[0])
         else:
             if '[' in breadcrumb[0]:
                 breadcrumb_key = breadcrumb[0].split('[')[0]
