@@ -152,7 +152,7 @@ def sync_log_based(config, state, stream):
                 seq_number_bookmarks.pop(shard['ShardId'])
                 state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
 
-        singer.write_state(state)
+    singer.write_state(state)
 
     return rows_saved
 
