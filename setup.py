@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="tap-dynamodb",
-    version="0.3.0",
+    version="0.3.1",
     description="Singer.io tap for extracting data",
     author="Stitch",
     url="http://singer.io",
