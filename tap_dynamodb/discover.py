@@ -6,24 +6,28 @@ from tap_dynamodb import dynamodb
 LOGGER = singer.get_logger()
 
 def discover_table_schema(client, table_name):
-    table_info = client.describe_table(TableName=table_name).get('Table', {})
+    try:
+        table_info = client.describe_table(TableName=table_name).get('Table', {})
+    except ClientError:
+        LOGGER.critical("Authorization to AWS failed. Please ensure the role and policy are configured correctly on your AWS account.")
+        return None
+    else:
+        # write stream metadata
+        mdata = {}
+        key_props = [key_schema.get('AttributeName') for key_schema in table_info.get('KeySchema', [])]
+        mdata = metadata.write(mdata, (), 'table-key-properties', key_props)
+        if table_info.get('ItemCount'):
+            mdata = metadata.write(mdata, (), 'row-count', table_info['ItemCount'])
 
-    # write stream metadata
-    mdata = {}
-    key_props = [key_schema.get('AttributeName') for key_schema in table_info.get('KeySchema', [])]
-    mdata = metadata.write(mdata, (), 'table-key-properties', key_props)
-    if table_info.get('ItemCount'):
-        mdata = metadata.write(mdata, (), 'row-count', table_info['ItemCount'])
-
-    return {
-        'table_name': table_name,
-        'stream': table_name,
-        'tap_stream_id': table_name,
-        'metadata': metadata.to_list(mdata),
-        'schema': {
-            'type': 'object'
+        return {
+            'table_name': table_name,
+            'stream': table_name,
+            'tap_stream_id': table_name,
+            'metadata': metadata.to_list(mdata),
+            'schema': {
+                'type': 'object'
+            }
         }
-    }
 
 
 def discover_streams(config):
@@ -43,5 +47,6 @@ def discover_streams(config):
         table_list += response.get('TableNames')
 
     streams = [discover_table_schema(client, table) for table in table_list]
+    streams = list(filter(None, streams))
 
     return streams
