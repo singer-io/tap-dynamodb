@@ -84,7 +84,7 @@ def get_latest_seq_numbers(config, stream):
     return sequence_number_bookmarks
 
 
-def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projection, md_map, deserializer, table_name, stream_version, state):
+def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projection, deserializer, table_name, stream_version, state):
     seq_number = seq_number_bookmarks.get(shard['ShardId'])
     if seq_number:
         iterator_type = 'AFTER_SEQUENCE_NUMBER'
@@ -106,8 +106,8 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
                 try:
                     record_message = deserializer.apply_projection(record_message, projection)
                 except:
-                    LOGGER.fatal("Projection failed to apply: %s", metadata.get(md_map, (), 'tap-mongodb.projection'))
-                    raise RuntimeError('Projection failed to apply: {}'.format(metadata.get(md_map, (), 'tap-mongodb.projection')))
+                    LOGGER.fatal("Projection failed to apply: %s", projection)
+                    raise RuntimeError('Projection failed to apply: {}'.format(projection))
 
         record_message = singer.RecordMessage(stream=table_name,
                                             record=record_message,
@@ -169,7 +169,7 @@ def sync_log_based(config, state, stream):
         # Only sync shards which we have not fully synced already
         if shard['ShardId'] not in finished_shard_bookmarks:
             rows_synced += sync_shard(shard, seq_number_bookmarks,
-                                      streams_client, stream_arn, projection, md_map, deserializer,
+                                      streams_client, stream_arn, projection, deserializer,
                                       table_name, stream_version, state)
 
         # If the shard we just finished syncing is closed (i.e. has an
