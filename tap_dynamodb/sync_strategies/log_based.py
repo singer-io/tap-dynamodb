@@ -119,6 +119,9 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
         seq_number_bookmarks[shard['ShardId']] = record['dynamodb']['SequenceNumber']
         state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
 
+    if rows_synced > 0:
+        singer.write_state(state)
+
     return rows_synced
 
 
@@ -181,10 +184,6 @@ def sync_log_based(config, state, stream):
                 state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
                 state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
                 singer.write_state(state)
-
-        if rows_synced % WRITE_STATE_PERIOD == 0:
-            singer.write_state(state)
-
 
     for shard in finished_shard_bookmarks:
         if shard not in found_shards:
