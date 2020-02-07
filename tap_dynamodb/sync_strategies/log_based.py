@@ -197,22 +197,35 @@ def sync_log_based(config, state, stream):
     return rows_synced
 
 def has_stream_aged_out(config, state, stream):
-    # TODO Check if the beginning sequence number can move. If it cannot this > check is useless
-    seq_number_bookmarks = singer.get_bookmark(state, stream['tap_stream_id'], 'shard_seq_numbers')
-
-    # TODO I think this is backwards? If we don't have any
-    # seq_number_bookmarks then where do we begin with logs?
-    if seq_number_bookmarks is None:
-        return False
-
     client = dynamodb.get_client(config)
     streams_client = dynamodb.get_stream_client(config)
     table = client.describe_table(TableName=stream['tap_stream_id'])['Table']
-
     stream_arn = table['LatestStreamArn']
-    shard_beg_seq_num =  {x['ShardId']: x['SequenceNumberRange']['StartingSequenceNumber'] for x in get_shards(streams_client, stream_arn)}
 
-    for shard_id, shard_bookmark in seq_number_bookmarks.items():
-        if shard_beg_seq_num.get(shard_id) is None or shard_beg_seq_num[shard_id] > shard_bookmark:
-            return True
-    return False
+    seq_number_bookmarks = singer.get_bookmark(state, stream['tap_stream_id'], 'shard_seq_numbers')
+
+    # If we do not have sequence number bookmarks then check the
+    # finished_shard bookmark and see if we have any of the previously
+    # finished shards still being returned by DynamoDB. If we do then we
+    # have not yet aged out
+    if seq_number_bookmarks is None or seq_number_bookmarks == {}:
+        # If we have only closed shard bookmarks and one of those shards
+        # are returned to us by get_shards then we have not missed any
+        # records
+        closed_shards =  (x['ShardId'] for x in get_shards(streams_client, stream_arn) if x['SequenceNumberRange'].get('EndingSequenceNumber', False))
+        finished_shard_bookmarks = singer.get_bookmark(state, table_name, 'finished_shards')
+        for shard in closed_shards:
+            if shard in finished_shard_bookmarks:
+                return False
+        return True
+    else:
+        # If we have a bookmark for an open shard and that shard is not
+        # returned to us by DynamoDB then we have missed the remainder of
+        # the shard. Similarly if the shard's earliest sequence number is
+        # after our bookmark then we have missed records on the shard
+        shard_beg_seq_num =  {x['ShardId']: x['SequenceNumberRange']['StartingSequenceNumber'] for x in get_shards(streams_client, stream_arn)}
+
+        for shard_id, shard_bookmark in seq_number_bookmarks.items():
+            if shard_beg_seq_num.get(shard_id) is None or shard_beg_seq_num[shard_id] > shard_bookmark:
+                return True
+        return False
