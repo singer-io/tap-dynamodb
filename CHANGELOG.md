@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.1
+ * Fixed bug where missing `finished_shard` bookmarks missing caused `has_stream_aged_out()` to throw an exception
+
 ## 0.4.0
  * Added bookmark `finished_shards` to track closed shard which we have synced entirely
 
