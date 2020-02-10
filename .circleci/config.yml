@@ -4,7 +4,7 @@ jobs:
     docker:
       - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester
       - image: amazon/dynamodb-local
-        entrypoint: ["java" "-Xmx1G"]
+        entrypoint: ["java", "-Xmx1G", "-jar", "DynamoDBLocal.jar"]
     steps:
       - checkout
       - add_ssh_keys
