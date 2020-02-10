@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.0
+ * Added bookmark `finished_shards` to track closed shard which we have synced entirely
+
 ## 0.3.1
  * Do not throw an error if a log-based record is missing a key in the projection
 
