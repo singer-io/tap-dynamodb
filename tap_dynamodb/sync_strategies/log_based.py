@@ -211,8 +211,12 @@ def has_stream_aged_out(config, state, stream):
         # If we have only closed shard bookmarks and one of those shards
         # are returned to us by get_shards then we have not missed any
         # records
-        closed_shards =  (x['ShardId'] for x in get_shards(streams_client, stream_arn) if x['SequenceNumberRange'].get('EndingSequenceNumber', False))
         finished_shard_bookmarks = singer.get_bookmark(state, stream['tap_stream_id'], 'finished_shards')
+        if finished_shard_bookmarks is None:
+           return True
+
+        closed_shards =  (x['ShardId'] for x in get_shards(streams_client, stream_arn) if x['SequenceNumberRange'].get('EndingSequenceNumber', False))
+
         for shard in closed_shards:
             if shard in finished_shard_bookmarks:
                 return False
