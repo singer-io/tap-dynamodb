@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.2
+ * Fixed but where `ExclusiveStartShardId` was not being set correctly
+
 ## 0.4.1
  * Fixed bug where missing `finished_shard` bookmarks missing caused `has_stream_aged_out()` to throw an exception
 
