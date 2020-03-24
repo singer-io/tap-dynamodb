@@ -27,10 +27,12 @@ def get_shards(streams_client, stream_arn, open_shards_only=False):
             else:
                 yield shard
 
-        if stream_info.get('LastEvaluatedShardId'):
+        last_evaluated_shard_id = stream_info.get('LastEvaluatedShardId')
+        has_more = last_evaluated_shard_id is not None
+
+        if has_more:
             params['ExclusiveStartShardId'] = last_evaluated_shard_id
 
-        has_more = stream_info.get('LastEvaluatedShardId', False)
 
 def get_shard_records(streams_client, stream_arn, shard, shard_iterator_type, sequence_number = ''):
     params = {
