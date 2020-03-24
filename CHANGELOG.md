@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.2
+ * Fixed `ExclusiveStartShardId` not being set correctly [#16](https://github.com/singer-io/tap-dynamodb/pull/16)
+
 ## 0.4.1
  * Fixed bug where missing `finished_shard` bookmarks missing caused `has_stream_aged_out()` to throw an exception
 
