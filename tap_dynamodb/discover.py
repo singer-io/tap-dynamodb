@@ -42,7 +42,6 @@ def discover_streams(config):
 
     while response.get('LastEvaluatedTableName') is not None:
         response = client.list_tables(ExclusiveStartTableName=response.get('LastEvaluatedTableName'))
-
         table_list += response.get('TableNames')
 
     streams = [x for x in
