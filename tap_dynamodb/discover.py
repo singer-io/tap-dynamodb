@@ -6,7 +6,11 @@ from tap_dynamodb import dynamodb
 LOGGER = singer.get_logger()
 
 def discover_table_schema(client, table_name):
-    table_info = client.describe_table(TableName=table_name).get('Table', {})
+    try:
+        table_info = client.describe_table(TableName=table_name).get('Table', {})
+    except ClientError:
+        LOGGER.info('Access to table %s was denied, skipping', table_name)
+        return None
 
     # write stream metadata
     mdata = {}
@@ -32,7 +36,6 @@ def discover_streams(config):
     try:
         response = client.list_tables()
     except ClientError:
-        LOGGER.critical("Authorization to AWS failed. Please ensure the role and policy are configured correctly on your AWS account.")
         raise Exception("Authorization to AWS failed. Please ensure the role and policy are configured correctly on your AWS account.")
 
     table_list = response.get('TableNames')
@@ -47,6 +50,9 @@ def discover_streams(config):
 
         table_list += response.get('TableNames')
 
-    streams = [discover_table_schema(client, table) for table in table_list]
+    streams = [x for x in
+               (discover_table_schema(client, table) for table in table_list)
+               if x is not None]
+
 
     return streams
