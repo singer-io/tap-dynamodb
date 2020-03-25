@@ -35,11 +35,16 @@ def discover_streams(config):
         LOGGER.critical("Authorization to AWS failed. Please ensure the role and policy are configured correctly on your AWS account.")
         raise Exception("Authorization to AWS failed. Please ensure the role and policy are configured correctly on your AWS account.")
 
-    lastEvaluatedTableName = response.get('LastEvaluatedTableName', None)
     table_list = response.get('TableNames')
-    while lastEvaluatedTableName is not None:
-        response = client.list_tables()
-        lastEvaluatedTableName = response.get('LastEvaluatedTableName', None)
+    for table_name in table_list:
+        LOGGER.info('Discovered table %s', table_name)
+
+    while response.get('LastEvaluatedTableName') is not None:
+        response = client.list_tables(ExclusiveStartTableName=response.get('LastEvaluatedTableName'))
+
+        for table_name in response.get('TableNames'):
+            LOGGER.info('Discovered table %s', table_name)
+
         table_list += response.get('TableNames')
 
     streams = [discover_table_schema(client, table) for table in table_list]
