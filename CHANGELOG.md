@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.3
+ * Properly paginate over table names [#18](https://github.com/singer-io/tap-dynamodb/pull/18)
+
 ## 0.4.2
  * Fixed `ExclusiveStartShardId` not being set correctly [#16](https://github.com/singer-io/tap-dynamodb/pull/16)
 
