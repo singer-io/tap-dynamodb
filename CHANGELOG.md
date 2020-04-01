@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.0
+  * Releasing v1.0.0 for GA
+
 ## 0.4.3
  * Properly paginate over table names [#18](https://github.com/singer-io/tap-dynamodb/pull/18)
 
