@@ -12,7 +12,7 @@ from tap_dynamodb.sync import sync_stream
 
 LOGGER = singer.get_logger()
 
-REQUIRED_CONFIG_KEYS = ["account_id", "external_id", "role_name", "region_name"]
+REQUIRED_CONFIG_KEYS = ["region_name"]
 
 def do_discover(config):
     LOGGER.info("Starting discover")
@@ -42,6 +42,14 @@ def do_sync(config, catalog, state):
         singer.write_state(state)
         key_properties = metadata.get(mdata, (), 'table-key-properties')
         singer.write_schema(stream_name, stream['schema'], key_properties)
+
+        filter_expression = metadata.get(mdata, (), 'FilterExpression')
+        filter_value = metadata.get(mdata, (), 'ExpressionAttributeValues')
+        scan_params = {}
+        if filter_expression and filter_value:
+            scan_params = { 'FilterExpression': filter_expression, 'ExpressionAttributeValues': json.loads(filter_value) }
+            config = { **config, **scan_params }
+            LOGGER.info("Applying scan_params: %s for stream: %s", str(scan_params), stream_name)
 
         LOGGER.info("%s: Starting sync", stream_name)
         counts[stream_name] = sync_stream(config, state, stream)
@@ -84,8 +92,8 @@ def main():
     config = args.config
 
     # TODO Is this the right way to do this? It seems bad
-    if not config.get('use_local_dynamo'):
-        setup_aws_client(config)
+    #if not config.get('use_local_dynamo'):
+    #    setup_aws_client(config)
 
     if args.discover:
         do_discover(args.config)
