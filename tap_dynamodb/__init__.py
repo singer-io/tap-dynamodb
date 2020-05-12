@@ -92,8 +92,8 @@ def main():
     config = args.config
 
     # TODO Is this the right way to do this? It seems bad
-    #if not config.get('use_local_dynamo'):
-    #    setup_aws_client(config)
+    if not config.get('use_local_dynamo'):
+        setup_aws_client(config)
 
     if args.discover:
         do_discover(args.config)
