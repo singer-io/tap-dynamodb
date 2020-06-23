@@ -46,19 +46,14 @@ def get_shard_records(streams_client, stream_arn, shard, shard_iterator_type, se
 
     shard_iterator = streams_client.get_shard_iterator(**params)['ShardIterator']
 
-    limit = 1000
-    has_more = True
+    while shard_iterator is not None:
 
-    while has_more:
-
-        records = streams_client.get_records(ShardIterator=shard_iterator, Limit=limit)
+        records = streams_client.get_records(ShardIterator=shard_iterator, Limit=1000)
 
         for record in records['Records']:
             yield record
 
         shard_iterator = records.get('NextShardIterator')
-
-        has_more = len(records['Records']) == limit and records.get('NextShardIterator')
 
 def get_latest_seq_numbers(config, stream):
     '''
@@ -147,10 +142,10 @@ def sync_log_based(config, state, stream):
 
     # Stores a dictionary of shardId : sequence_number for a shard. Should
     # only store sequence numbers for open shards, as closed shards should
-    # be put into finished_shard_bookmarks
+    # be put into finished_shard bookmark
     seq_number_bookmarks = singer.get_bookmark(state, table_name, 'shard_seq_numbers')
 
-    # Store the list of closed shards which we have fully synced. These
+    # Get the list of closed shards which we have fully synced. These
     # are removed after performing a sync and not seeing the shardId
     # returned by get_shards() because at that point the shard has been
     # killed by DynamoDB and will not be returned anymore
