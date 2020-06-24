@@ -191,10 +191,8 @@ class DynamoDBLogBasedProjections(unittest.TestCase):
     def get_properties(self):
         return {
             "use_local_dynamo": 'true',
-            "region_name": "us-east-1",
-            "account_id": "not-used",
-            "external_id": "not-used",
-            "role_name": "not-used"
+            "account_id": "123123123123",
+            "region_name": "us-east-1"
         }
 
     def get_credentials(self):

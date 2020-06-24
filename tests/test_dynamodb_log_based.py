@@ -157,10 +157,9 @@ class DynamoDBLogBased(unittest.TestCase):
 
     def get_properties(self):
         return {
-            "region_name": "us-east-1",
-            "account_id": "218546966473",
-            "external_id": "not-used",
-            "role_name": "read_only"
+            "use_local_dynamo": 'true',
+            "account_id": "123123123123",
+            "region_name": "us-east-1"
         }
 
     def get_credentials(self):
