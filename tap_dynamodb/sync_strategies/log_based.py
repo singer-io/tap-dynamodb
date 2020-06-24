@@ -48,6 +48,7 @@ def get_shard_records(streams_client, stream_arn, shard, shard_iterator_type, se
 
     while shard_iterator is not None:
 
+        LOGGER.info("Retreiving shard iterator: %s", shard_iterator)
         records = streams_client.get_records(ShardIterator=shard_iterator, Limit=1000)
 
         for record in records['Records']:
