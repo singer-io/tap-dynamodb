@@ -26,13 +26,13 @@ jobs:
             source tap-tester.env
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             cd /root/project/
-            run-a-test --tap=tap-dynamodb \
+            run-test --tap=tap-dynamodb \
                        --target=target-stitch \
                        --orchestrator=stitch-orchestrator \
                        --email=harrison+sandboxtest@stitchdata.com \
                        --password=$SANDBOX_PASSWORD \
                        --client-id=50 \
-                       tap_tester.suites.dynamodb
+                       tests
 workflows:
   version: 2
   commit:
