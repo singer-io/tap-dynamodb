@@ -96,7 +96,9 @@ def generate_items(num_items, start_key = 0):
 class DynamoDBLogBased(unittest.TestCase):
 
     def setUp(self):
-        client = boto3.client('dynamodb', region_name='us-east-1')
+        client = boto3.client('dynamodb',
+                              endpoint_url='http://localhost:8000',
+                              region_name='us-east-1')
 
         table_configs = expected_table_config()
 
@@ -118,7 +120,9 @@ class DynamoDBLogBased(unittest.TestCase):
                 client.put_item(TableName=table['TableName'], Item=item['M'])
 
     def addMoreData(self, numRows):
-        client = boto3.client('dynamodb', region_name='us-east-1')
+        client = boto3.client('dynamodb',
+                              endpoint_url='http://localhost:8000',
+                              region_name='us-east-1')
 
         table_configs = expected_table_config()
 
@@ -128,7 +132,9 @@ class DynamoDBLogBased(unittest.TestCase):
                 client.put_item(TableName=table['TableName'], Item=item['M'])
 
     def updateData(self, numRows):
-        client = boto3.client('dynamodb', region_name='us-east-1')
+        client = boto3.client('dynamodb',
+                              endpoint_url='http://localhost:8000',
+                              region_name='us-east-1')
 
         table_configs = expected_table_config()
 
@@ -138,7 +144,9 @@ class DynamoDBLogBased(unittest.TestCase):
                 client.put_item(TableName=table['TableName'], Item=item['M'])
 
     def deleteData(self, id_range):
-        client = boto3.client('dynamodb', region_name='us-east-1')
+        client = boto3.client('dynamodb',
+                              endpoint_url='http://localhost:8000',
+                              region_name='us-east-1')
 
         for table in expected_table_config():
             for id in id_range:
@@ -320,7 +328,9 @@ class DynamoDBLogBased(unittest.TestCase):
         state = menagerie.get_state(conn_id)
 
         # TODO Check log based things
-        client = boto3.client('dynamodb', region_name='us-east-1')
+        client = boto3.client('dynamodb',
+                              endpoint_url='http://localhost:8000',
+                              region_name='us-east-1')
 
         clear_tables(client, (x['TableName'] for x in table_configs))
 
