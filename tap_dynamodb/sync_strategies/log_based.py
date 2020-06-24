@@ -46,7 +46,9 @@ def get_shard_records(streams_client, stream_arn, shard, shard_iterator_type, se
 
     shard_iterator = streams_client.get_shard_iterator(**params)['ShardIterator']
 
-    while shard_iterator is not None:
+    has_more = True
+
+    while has_more:
 
         LOGGER.info("Retreiving records for shard iterator: %s", shard_iterator)
         records = streams_client.get_records(ShardIterator=shard_iterator, Limit=1000)
@@ -55,6 +57,7 @@ def get_shard_records(streams_client, stream_arn, shard, shard_iterator_type, se
             yield record
 
         shard_iterator = records.get('NextShardIterator')
+        has_more = len(records['Records']) > 0
 
 def get_latest_seq_numbers(config, stream):
     '''
