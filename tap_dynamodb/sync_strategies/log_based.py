@@ -181,7 +181,7 @@ def sync(config, state, stream):
 
     return rows_synced
 
-def has_stream_aged_out(state, stream):
+def has_stream_aged_out(state, table_name):
     '''
     Uses the success_timestamp on the stream to determine if we have
     successfully synced the stream in the last 19 hours 30 minutes.
@@ -193,11 +193,17 @@ def has_stream_aged_out(state, stream):
     '''
     current_time = singer.utils.now()
 
-    success_timestamp = singer.utils.strptime_to_utc(singer.get_bookmark(state, stream, 'success_timestamp'))
+    success_timestamp = singer.get_bookmark(state, table_name, 'success_timestamp')
 
-    time_span = current_time - success_timestamp
+    # If we have no success_timestamp then we have aged out
+    if not success_timestamp:
+        return True
 
-    return time_span < datetime.timedelta(hours=19, minutes=30)
+    time_span = current_time - singer.utils.strptime_to_utc(success_timestamp)
+
+    # If it has been > than 19h30m since the last successful sync of this
+    # stream then we feel confident we have not aged out
+    return time_span > datetime.timedelta(hours=19, minutes=30)
 
 def get_initial_bookmarks(config, state, table_name):
     '''
