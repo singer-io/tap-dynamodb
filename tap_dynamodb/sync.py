@@ -1,7 +1,7 @@
 from singer import metadata
 import singer
-import tap_dynamodb.sync_strategies.log_based
-import tap_dynamodb.sync_strategies.full_table
+from tap_dynamodb.sync_strategies import log_based
+from tap_dynamodb.sync_strategies import full_table
 
 LOGGER = singer.get_logger()
 
@@ -62,6 +62,6 @@ def sync_stream(config, state, stream):
     else:
         LOGGER.info('Unknown replication method: %s for stream: %s', replication_method, table_name)
 
-    state = singer.write_bookmark(state, stream, 'success_timestamp', singer.now())
+    state = singer.write_bookmark(state, stream, 'success_timestamp', singer.utils.now())
 
     return rows_saved
