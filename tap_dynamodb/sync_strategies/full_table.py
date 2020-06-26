@@ -35,7 +35,7 @@ def scan_table(table_name, projection, last_evaluated_key, config):
 
         has_more = result.get('LastEvaluatedKey', False)
 
-def sync_full_table(config, state, stream):
+def sync(config, state, stream):
     table_name = stream['tap_stream_id']
 
     #before writing the table version to state, check if we had one to begin with

@@ -1,8 +1,7 @@
 from singer import metadata
 import singer
-from tap_dynamodb.sync_strategies.full_table import sync_full_table
-from tap_dynamodb.sync_strategies.log_based import sync_log_based, has_stream_aged_out, get_latest_seq_numbers
-
+import tap_dynamodb.sync_strategies.log_based
+import tap_dynamodb.sync_strategies.full_table
 
 LOGGER = singer.get_logger()
 
@@ -42,30 +41,27 @@ def sync_stream(config, state, stream):
     rows_saved = 0
     if replication_method == 'FULL_TABLE':
         LOGGER.info("Syncing full table for stream: %s", table_name)
-        rows_saved += sync_full_table(config, state, stream)
+        rows_saved += full_table.sync(config, state, stream)
     elif replication_method == 'LOG_BASED':
         LOGGER.info("Syncing log based for stream: %s", table_name)
 
-        if has_stream_aged_out(config, state, stream):
+        if log_based.has_stream_aged_out(state, stream):
             LOGGER.info("Clearing state because stream has aged out")
             state.get('bookmarks', {}).pop(table_name)
-
-        # TODO Check to see if latest stream ARN has changed and wipe state if so
 
         if not singer.get_bookmark(state, table_name, 'initial_full_table_complete'):
             msg = 'Must complete full table sync before replicating from dynamodb streams for %s'
             LOGGER.info(msg, table_name)
 
-            # only mark latest sequence numbers in dynamo streams on first sync so
-            # tap has a starting point after the full table sync
-            if not singer.get_bookmark(state, table_name, 'version'):
-                latest_sequence_numbers = get_latest_seq_numbers(config, stream)
-                state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', latest_sequence_numbers)
+            state = log_based.get_initial_bookmarks(config, state, table_name)
+            singer.write_state(state)
 
-            rows_saved += sync_full_table(config, state, stream)
+            rows_saved += full_table.sync(config, state, stream)
 
-        rows_saved += sync_log_based(config, state, stream)
+        rows_saved += log_based.sync(config, state, stream)
     else:
         LOGGER.info('Unknown replication method: %s for stream: %s', replication_method, table_name)
+
+    state = singer.write_bookmark(state, stream, 'success_timestamp', singer.now())
 
     return rows_saved
