@@ -45,7 +45,7 @@ def sync_stream(config, state, stream):
     elif replication_method == 'LOG_BASED':
         LOGGER.info("Syncing log based for stream: %s", table_name)
 
-        if log_based.has_stream_aged_out(state, stream):
+        if log_based.has_stream_aged_out(state, table_name):
             LOGGER.info("Clearing state because stream has aged out")
             state.get('bookmarks', {}).pop(table_name)
 
@@ -62,6 +62,6 @@ def sync_stream(config, state, stream):
     else:
         LOGGER.info('Unknown replication method: %s for stream: %s', replication_method, table_name)
 
-    state = singer.write_bookmark(state, stream, 'success_timestamp', singer.utils.now())
+    state = singer.write_bookmark(state, table_name, 'success_timestamp', singer.utils.now())
 
     return rows_saved
