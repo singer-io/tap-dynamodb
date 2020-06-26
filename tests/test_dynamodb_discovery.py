@@ -20,19 +20,9 @@ import singer
 
 import decimal
 
+from base import TestDynamoDBBase
+
 LOGGER = singer.get_logger()
-def clear_tables(client, table_names):
-    try:
-        for table_name in table_names:
-            table = client.delete_table(TableName=table_name)
-
-        # wait for all tables to be deleted
-        waiter = client.get_waiter('table_not_exists')
-        for table_name in table_names:
-            waiter.wait(TableName=table_name, WaiterConfig={"Delay": 3, "MaxAttempts": 20})        
-    except:
-        print('\nCould not clear tables')
-
 def create_table(client, table_name, hash_key, hash_type, sort_key, sort_type):
     print('\nCreating table: {}'.format(table_name))
 
@@ -101,7 +91,7 @@ def generate_simple_items_2(num_items):
                'int_field': {'N': str(i) } }
 
     
-class DynamoDBDiscovery(unittest.TestCase):
+class DynamoDBDiscovery(TestDynamoDBBase):
 
     def setUp(self):
         client = boto3.client('dynamodb',
@@ -110,7 +100,7 @@ class DynamoDBDiscovery(unittest.TestCase):
 
         table_configs = expected_table_config()
 
-        clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client, (x['TableName'] for x in table_configs))
 
         for table in table_configs:
             create_table(client,
@@ -208,6 +198,6 @@ class DynamoDBDiscovery(unittest.TestCase):
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client, (x['TableName'] for x in table_configs))
 
 SCENARIOS.add(DynamoDBDiscovery)
