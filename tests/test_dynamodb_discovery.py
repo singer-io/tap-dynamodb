@@ -23,92 +23,55 @@ import decimal
 from base import TestDynamoDBBase
 
 LOGGER = singer.get_logger()
-def create_table(client, table_name, hash_key, hash_type, sort_key, sort_type):
-    print('\nCreating table: {}'.format(table_name))
-
-    key_schema = [
-        {
-            'AttributeName': hash_key,
-            'KeyType': 'HASH'  #Partition key
-        },
-    ]
-
-    attribute_defs = [
-        {
-            'AttributeName': hash_key,
-            'AttributeType': hash_type
-        },
-    ]
-
-    if sort_key:
-        key_schema.append({ 'AttributeName': sort_key, 'KeyType': 'RANGE' })
-        attribute_defs.append({ 'AttributeName': sort_key, 'AttributeType': sort_type })
-    
-    client.create_table(
-        TableName=table_name,
-        KeySchema=key_schema,
-        AttributeDefinitions=attribute_defs,
-        ProvisionedThroughput={
-            'ReadCapacityUnits': 1,
-            'WriteCapacityUnits': 1
-        }
-    )
-    print('Finished creating table: {}'.format(table_name))
-
-def expected_table_config():
-    return [
-        {'TableName': 'simple_table_1',
-         'HashKey': 'int_id',
-         'HashType': 'N',
-         'SortKey': 'string_field',
-         'SortType': 'S',
-         'generator': generate_simple_items_1},
-        {'TableName': 'simple_table_2',
-         'HashKey': 'string_id',
-         'HashType': 'S',
-         'SortKey': 'int_field',
-         'generator': generate_simple_items_2,
-         'SortType': 'N'},
-        {'TableName': 'simple_table_3',
-         'HashKey': 'int_id',
-         'generator': generate_simple_items_1,
-         'HashType': 'N'},
-    ]
-
-def random_string_generator(size=6, chars=string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for x in range(size))
-    
-
-def generate_simple_items_1(num_items):
-    for i in range(num_items):
-        yield {'int_id': { 'N': str(i) },
-               'string_field': {'S': random_string_generator() } }
-
-
-def generate_simple_items_2(num_items):
-    for i in range(num_items):
-        yield {'string_id': { 'S': random_string_generator() },
-               'int_field': {'N': str(i) } }
-
     
 class DynamoDBDiscovery(TestDynamoDBBase):
+    def expected_table_config():
+        return [
+            {'TableName': 'simple_table_1',
+            'HashKey': 'int_id',
+            'HashType': 'N',
+            'SortKey': 'string_field',
+            'SortType': 'S',
+            'generator': self.generate_simple_items_1},
+            {'TableName': 'simple_table_2',
+            'HashKey': 'string_id',
+            'HashType': 'S',
+            'SortKey': 'int_field',
+            'generator': self.generate_simple_items_2,
+            'SortType': 'N'},
+            {'TableName': 'simple_table_3',
+            'HashKey': 'int_id',
+            'generator': self.generate_simple_items_1,
+            'HashType': 'N'},
+        ]
+
+    def generate_simple_items_1(num_items):
+        for i in range(num_items):
+            yield {'int_id': { 'N': str(i) },
+                'string_field': {'S': self.random_string_generator() } }
+
+
+    def generate_simple_items_2(num_items):
+        for i in range(num_items):
+            yield {'string_id': { 'S': self.random_string_generator() },
+                'int_field': {'N': str(i) } }
 
     def setUp(self):
         client = boto3.client('dynamodb',
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        table_configs = expected_table_config()
+        table_configs = self.expected_table_config()
 
         self.clear_tables(client, (x['TableName'] for x in table_configs))
 
         for table in table_configs:
-            create_table(client,
-                         table['TableName'],
-                         table['HashKey'],
-                         table['HashType'],
-                         table.get('SortKey'),
-                         table.get('SortType'))
+            self.create_table(client,
+                              table['TableName'],
+                              table['HashKey'],
+                              table['HashType'],
+                              table.get('SortKey'),
+                              table.get('SortType'))
 
         waiter = client.get_waiter('table_exists')
         for table in table_configs:
@@ -116,8 +79,6 @@ class DynamoDBDiscovery(TestDynamoDBBase):
             waiter.wait(TableName=table['TableName'], WaiterConfig={"Delay": 1, "MaxAttempts": 20})        
             for item in table['generator'](50):
                 client.put_item(TableName=table['TableName'], Item=item)
-
-
 
     def name(self):
         return "tap_tester_dynamodb_discovery"
@@ -151,7 +112,7 @@ class DynamoDBDiscovery(TestDynamoDBBase):
         # tap discovered the right streams
         catalog = menagerie.get_catalog(conn_id)
 
-        table_configs = expected_table_config()
+        table_configs = self.expected_table_config()
 
         for stream in catalog['streams']:
             # schema is open {} for each stream

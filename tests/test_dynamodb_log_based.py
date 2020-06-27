@@ -22,95 +22,42 @@ import singer
 import decimal
 
 LOGGER = singer.get_logger()
-def clear_tables(client, table_names):
-    try:
-        for table_name in table_names:
-            table = client.delete_table(TableName=table_name)
-
-        # wait for all tables to be deleted
-        waiter = client.get_waiter('table_not_exists')
-        for table_name in table_names:
-            waiter.wait(TableName=table_name, WaiterConfig={"Delay": 3, "MaxAttempts": 20})
-    except:
-        print('\nCould not clear tables')
-
-def create_table(client, table_name, hash_key, hash_type, sort_key, sort_type):
-    print('\nCreating table: {}'.format(table_name))
-
-    key_schema = [
-        {
-            'AttributeName': hash_key,
-            'KeyType': 'HASH'  #Partition key
-        },
-    ]
-
-    attribute_defs = [
-        {
-            'AttributeName': hash_key,
-            'AttributeType': hash_type
-        },
-    ]
-
-    if sort_key:
-        key_schema.append({ 'AttributeName': sort_key, 'KeyType': 'RANGE' })
-        attribute_defs.append({ 'AttributeName': sort_key, 'AttributeType': sort_type })
-
-    client.create_table(
-        TableName=table_name,
-        KeySchema=key_schema,
-        AttributeDefinitions=attribute_defs,
-        ProvisionedThroughput={
-            'ReadCapacityUnits': 2,
-            'WriteCapacityUnits': 2
-        },
-        BillingMode='PROVISIONED',
-        StreamSpecification={
-            'StreamEnabled': True,
-            'StreamViewType': 'NEW_IMAGE'
-        },
-    )
-    print('Finished creating table: {}'.format(table_name))
-
-def expected_table_config():
-    return [
-        {'TableName': 'com-stitchdata-test-dynamodb-integration-simple_table_1',
-         'HashKey': 'int_id',
-         'HashType': 'N',
-         'generator': generate_items,
-         'num_rows': 100},
-    ]
-
-def random_string_generator(size=6, chars=string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for x in range(size))
 
 
-def generate_items(num_items, start_key = 0):
-    serializer = TypeSerializer()
-    for i in range(start_key, start_key + num_items):
-        record = {
-            'int_id': i,
-        }
-        yield serializer.serialize(record)
+class DynamoDBLogBased(TestDynamoDBBase):
+    def expected_table_config():
+        return [
+            {'TableName': 'com-stitchdata-test-dynamodb-integration-simple_table_1',
+            'HashKey': 'int_id',
+            'HashType': 'N',
+            'generator': self.generate_items,
+            'num_rows': 100},
+        ]
 
-
-class DynamoDBLogBased(unittest.TestCase):
+    def generate_items(num_items, start_key = 0):
+        serializer = TypeSerializer()
+        for i in range(start_key, start_key + num_items):
+            record = {
+                'int_id': i,
+            }
+            yield serializer.serialize(record)
 
     def setUp(self):
         client = boto3.client('dynamodb',
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        table_configs = expected_table_config()
+        table_configs = self.expected_table_config()
 
-        clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client, (x['TableName'] for x in table_configs))
 
         for table in table_configs:
-            create_table(client,
-                         table['TableName'],
-                         table['HashKey'],
-                         table['HashType'],
-                         table.get('SortKey'),
-                         table.get('SortType'))
+            self.create_table(client,
+                              table['TableName'],
+                              table['HashKey'],
+                              table['HashType'],
+                              table.get('SortKey'),
+                              table.get('SortType'))
 
         waiter = client.get_waiter('table_exists')
         for table in table_configs:
@@ -124,7 +71,7 @@ class DynamoDBLogBased(unittest.TestCase):
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        table_configs = expected_table_config()
+        table_configs = self.expected_table_config()
 
         for table in table_configs:
             LOGGER.info('Adding Items for {}'.format(table['TableName']))
@@ -136,7 +83,7 @@ class DynamoDBLogBased(unittest.TestCase):
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        table_configs = expected_table_config()
+        table_configs = self.expected_table_config()
 
         for table in table_configs:
             LOGGER.info('Adding Items for {}'.format(table['TableName']))
@@ -186,7 +133,7 @@ class DynamoDBLogBased(unittest.TestCase):
         # tap discovered the right streams
         catalog = menagerie.get_catalog(conn_id)
 
-        table_configs = expected_table_config()
+        table_configs = self.expected_table_config()
 
         for stream in catalog['streams']:
             # schema is open {} for each stream
@@ -332,6 +279,6 @@ class DynamoDBLogBased(unittest.TestCase):
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client, (x['TableName'] for x in table_configs))
 
 SCENARIOS.add(DynamoDBLogBased)

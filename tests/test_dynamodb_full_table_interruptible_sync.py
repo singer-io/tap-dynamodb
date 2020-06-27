@@ -2,108 +2,26 @@ from tap_tester.scenario import (SCENARIOS)
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
-import os
-import unittest
-import string
-import random
-import time
-import re
-import pprint
-import pdb
-import paramiko
 import csv
-import json
 import boto3
-from boto3.dynamodb.types import TypeSerializer
-from datetime import datetime, timedelta, timezone
-from singer import utils, metadata
 import singer
 
-import decimal
+from base import TestDynamoDBBase
 
 LOGGER = singer.get_logger()
-def clear_tables(client, table_names):
-    try:
-        for table_name in table_names:
-            table = client.delete_table(TableName=table_name)
-
-        # wait for all tables to be deleted
-        waiter = client.get_waiter('table_not_exists')
-        for table_name in table_names:
-            waiter.wait(TableName=table_name, WaiterConfig={"Delay": 3, "MaxAttempts": 20})
-    except:
-        print('\nCould not clear tables')
-
-def create_table(client, table_name, hash_key, hash_type, sort_key, sort_type):
-    print('\nCreating table: {}'.format(table_name))
-
-    key_schema = [
-        {
-            'AttributeName': hash_key,
-            'KeyType': 'HASH'  #Partition key
-        },
-    ]
-
-    attribute_defs = [
-        {
-            'AttributeName': hash_key,
-            'AttributeType': hash_type
-        },
-    ]
-
-    if sort_key:
-        key_schema.append({ 'AttributeName': sort_key, 'KeyType': 'RANGE' })
-        attribute_defs.append({ 'AttributeName': sort_key, 'AttributeType': sort_type })
-
-    client.create_table(
-        TableName=table_name,
-        KeySchema=key_schema,
-        AttributeDefinitions=attribute_defs,
-        ProvisionedThroughput={
-            'ReadCapacityUnits': 1,
-            'WriteCapacityUnits': 1
-        }
-    )
-    print('Finished creating table: {}'.format(table_name))
-
-def expected_table_config():
-    return [
-        {'TableName': 'simple_table_1',
-         'HashKey': 'int_id',
-         'HashType': 'N',
-         'SortKey': 'string_field',
-         'SortType': 'S',
-         'generator': generate_items,
-         'num_rows': 3531},
-    ]
-
-def random_string_generator(size=6, chars=string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for x in range(size))
 
 
-def generate_items(num_items):
-    serializer = TypeSerializer()
-    for i in range(num_items):
-        record = {
-            'int_id': int(i/10.0),
-            'decimal_field': decimal.Decimal(str(i) + '.00000000001'),
-            'string_field': str(i),
-            'byte_field': b'some_bytes',
-            'int_list_field': [i, i+1, i+2],
-            'int_set_field': set([i, i+1, i+2]),
-            'map_field': {
-                'map_entry_1': 'map_value_1',
-                'map_entry_2': 'map_value_2'
-            },
-            'string_list': [random_string_generator(), random_string_generator(), random_string_generator()],
-            'boolean_field': True,
-            'other_boolean_field': False,
-            'null_field': None
-        }
-        yield serializer.serialize(record)
-
-
-class DynamoDBFullTableInterruptible(unittest.TestCase):
+class DynamoDBFullTableInterruptible(TestDynamoDBBase):
+    def expected_table_config():
+        return [
+            {'TableName': 'simple_table_1',
+            'HashKey': 'int_id',
+            'HashType': 'N',
+            'SortKey': 'string_field',
+            'SortType': 'S',
+            'generator': self.generate_items,
+            'num_rows': 3531},
+        ]
 
     def setUp(self):
         client = boto3.client('dynamodb',
@@ -112,15 +30,15 @@ class DynamoDBFullTableInterruptible(unittest.TestCase):
 
         table_configs = expected_table_config()
 
-        clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client, (x['TableName'] for x in table_configs))
 
         for table in table_configs:
-            create_table(client,
-                         table['TableName'],
-                         table['HashKey'],
-                         table['HashType'],
-                         table.get('SortKey'),
-                         table.get('SortType'))
+            self.create_table(client,
+                              table['TableName'],
+                              table['HashKey'],
+                              table['HashType'],
+                              table.get('SortKey'),
+                              table.get('SortType'))
 
         waiter = client.get_waiter('table_exists')
         for table in table_configs:
@@ -128,8 +46,6 @@ class DynamoDBFullTableInterruptible(unittest.TestCase):
             waiter.wait(TableName=table['TableName'], WaiterConfig={"Delay": 1, "MaxAttempts": 20})
             for item in table['generator'](table['num_rows']):
                 client.put_item(TableName=table['TableName'], Item=item['M'])
-
-
 
     def name(self):
         return "tap_tester_dynamodb_full_table_interruptible"
@@ -292,6 +208,6 @@ class DynamoDBFullTableInterruptible(unittest.TestCase):
                               region_name='us-east-1')
 
 
-        clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client, (x['TableName'] for x in table_configs))
 
 SCENARIOS.add(DynamoDBFullTableInterruptible)
