@@ -63,5 +63,6 @@ def sync_stream(config, state, stream):
         LOGGER.info('Unknown replication method: %s for stream: %s', replication_method, table_name)
 
     state = singer.write_bookmark(state, table_name, 'success_timestamp', singer.utils.now())
+    singer.write_state(state)
 
     return rows_saved
