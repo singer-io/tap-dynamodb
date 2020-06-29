@@ -96,11 +96,25 @@ class DynamoDBLogBased(TestDynamoDBBase):
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        for table in expected_table_config():
+        for table in self.expected_table_config():
             for id in id_range:
                 client.delete_item(TableName=table['TableName'],
                                    Key={'int_id': {
                                        'N': str(id)}})
+
+    def disableStreams(self, table_names):
+        client = boto3.client('dynamodb',
+                              endpoint_url='http://localhost:8000',
+                              region_name='us-east-1')
+
+        for table_name in table_names:
+            client.update_table(
+                TableName=table_name,
+                StreamSpecification={
+                    'StreamEnabled': False,
+                },
+            )
+
 
     def name(self):
         return "tap_tester_dynamodb_log_based"
@@ -257,6 +271,8 @@ class DynamoDBLogBased(TestDynamoDBBase):
         self.deleteData(range(100, 110))
         # Change some rows
         self.updateData(10)
+        # Force streams and shards closed
+        self.disableStreams(expected_streams)
 
         ################################
         # Run sync again and check that records did come through

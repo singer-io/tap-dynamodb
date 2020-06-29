@@ -1,4 +1,5 @@
 import boto3
+import datetime
 from singer import metadata
 import singer
 
@@ -57,7 +58,7 @@ def get_shard_records(streams_client, stream_arn, shard, sequence_number):
     params = {
         'StreamArn': stream_arn,
         'ShardId': shard['ShardId'],
-        'ShardIteratorType': shard_iterator_type
+        'ShardIteratorType': iterator_type
     }
 
     if sequence_number:
@@ -135,6 +136,8 @@ def sync(config, state, stream):
     # only store sequence numbers for closed shards that have not been
     # fully synced
     seq_number_bookmarks = singer.get_bookmark(state, table_name, 'shard_seq_numbers')
+    if not seq_number_bookmarks:
+        seq_number_bookmarks = dict()
 
     # Get the list of closed shards which we have fully synced. These
     # are removed after performing a sync and not seeing the shardId
