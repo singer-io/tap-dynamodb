@@ -26,7 +26,7 @@ LOGGER = singer.get_logger()
 
 
 class DynamoDBLogBasedProjections(TestDynamoDBBase):
-    def expected_table_config():
+    def expected_table_config(self):
         return [
             {
                 'TableName': 'simple_table_1',
@@ -46,9 +46,9 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        table_configs = expected_table_config()
+        table_configs = self.expected_table_config()
 
-        self.clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client)
 
         for table in table_configs:
             self.create_table(client,
@@ -315,6 +315,6 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        self.clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client)
 
 SCENARIOS.add(DynamoDBLogBasedProjections)

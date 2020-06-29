@@ -12,7 +12,7 @@ LOGGER = singer.get_logger()
 
 
 class DynamoDBFullTableInterruptible(TestDynamoDBBase):
-    def expected_table_config():
+    def expected_table_config(self):
         return [
             {'TableName': 'simple_table_1',
             'HashKey': 'int_id',
@@ -28,9 +28,9 @@ class DynamoDBFullTableInterruptible(TestDynamoDBBase):
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        table_configs = expected_table_config()
+        table_configs = self.expected_table_config()
 
-        self.clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client)
 
         for table in table_configs:
             self.create_table(client,
@@ -79,7 +79,7 @@ class DynamoDBFullTableInterruptible(TestDynamoDBBase):
         # tap discovered the right streams
         catalog = menagerie.get_catalog(conn_id)
 
-        table_configs = expected_table_config()
+        table_configs = self.expected_table_config()
 
         for stream in catalog['streams']:
             # schema is open {} for each stream
@@ -208,6 +208,6 @@ class DynamoDBFullTableInterruptible(TestDynamoDBBase):
                               region_name='us-east-1')
 
 
-        self.clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client)
 
 SCENARIOS.add(DynamoDBFullTableInterruptible)

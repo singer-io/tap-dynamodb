@@ -5,8 +5,17 @@ import string
 
 from boto3.dynamodb.types import TypeSerializer
 
+ALL_TABLE_NAMES_TO_CLEAR = {
+    'simple_table_1',
+    'simple_table_2',
+    'simple_table_3',
+    'com-stitchdata-test-dynamodb-integration-simple_table_1',
+}
+    
+
 class TestDynamoDBBase(unittest.TestCase):
-    def create_table(client, table_name, hash_key, hash_type, sort_key, sort_type):
+    def create_table(self, client, table_name, hash_key, hash_type, sort_key, sort_type):
+        self.assertIn(table_name, ALL_TABLE_NAMES_TO_CLEAR)
         print('\nCreating table: {}'.format(table_name))
 
         key_schema = [
@@ -42,7 +51,7 @@ class TestDynamoDBBase(unittest.TestCase):
         )
         print('Finished creating table: {}'.format(table_name))
 
-    def clear_tables(client, table_names):
+    def clear_tables(self, client, table_names=ALL_TABLE_NAMES_TO_CLEAR):
         for table_name in table_names:
             try:
                 table = client.delete_table(TableName=table_name)
@@ -57,10 +66,13 @@ class TestDynamoDBBase(unittest.TestCase):
             except Exception as e:
                 print('\nCould not wait on table {} due to error {}'.format(table_name, e))
 
-    def random_string_generator(size=6, chars=string.ascii_uppercase + string.digits):
+        list_tables_output = client.list_tables()['TableNames']
+        print('\nlist_tables output after clearing tables:{}'.format(list_tables_output))
+
+    def random_string_generator(self, size=6, chars=string.ascii_uppercase + string.digits):
         return ''.join(random.choice(chars) for x in range(size))
 
-    def generate_items(num_items):
+    def generate_items(self, num_items):
         serializer = TypeSerializer()
         for i in range(num_items):
             record = {

@@ -25,7 +25,7 @@ from base import TestDynamoDBBase
 LOGGER = singer.get_logger()
     
 class DynamoDBDiscovery(TestDynamoDBBase):
-    def expected_table_config():
+    def expected_table_config(self):
         return [
             {'TableName': 'simple_table_1',
             'HashKey': 'int_id',
@@ -45,13 +45,13 @@ class DynamoDBDiscovery(TestDynamoDBBase):
             'HashType': 'N'},
         ]
 
-    def generate_simple_items_1(num_items):
+    def generate_simple_items_1(self, num_items):
         for i in range(num_items):
             yield {'int_id': { 'N': str(i) },
                 'string_field': {'S': self.random_string_generator() } }
 
 
-    def generate_simple_items_2(num_items):
+    def generate_simple_items_2(self, num_items):
         for i in range(num_items):
             yield {'string_id': { 'S': self.random_string_generator() },
                 'int_field': {'N': str(i) } }
@@ -63,7 +63,7 @@ class DynamoDBDiscovery(TestDynamoDBBase):
 
         table_configs = self.expected_table_config()
 
-        self.clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client)
 
         for table in table_configs:
             self.create_table(client,
@@ -159,6 +159,6 @@ class DynamoDBDiscovery(TestDynamoDBBase):
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        self.clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client)
 
 SCENARIOS.add(DynamoDBDiscovery)

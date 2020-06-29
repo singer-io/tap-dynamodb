@@ -18,14 +18,15 @@ from boto3.dynamodb.types import TypeSerializer
 from datetime import datetime, timedelta, timezone
 from singer import utils, metadata
 import singer
-
 import decimal
+
+from base import TestDynamoDBBase
 
 LOGGER = singer.get_logger()
 
 
 class DynamoDBLogBased(TestDynamoDBBase):
-    def expected_table_config():
+    def expected_table_config(self):
         return [
             {'TableName': 'com-stitchdata-test-dynamodb-integration-simple_table_1',
             'HashKey': 'int_id',
@@ -34,7 +35,7 @@ class DynamoDBLogBased(TestDynamoDBBase):
             'num_rows': 100},
         ]
 
-    def generate_items(num_items, start_key = 0):
+    def generate_items(self, num_items, start_key = 0):
         serializer = TypeSerializer()
         for i in range(start_key, start_key + num_items):
             record = {
@@ -49,7 +50,7 @@ class DynamoDBLogBased(TestDynamoDBBase):
 
         table_configs = self.expected_table_config()
 
-        self.clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client)
 
         for table in table_configs:
             self.create_table(client,
@@ -279,6 +280,6 @@ class DynamoDBLogBased(TestDynamoDBBase):
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        self.clear_tables(client, (x['TableName'] for x in table_configs))
+        self.clear_tables(client)
 
 SCENARIOS.add(DynamoDBLogBased)
