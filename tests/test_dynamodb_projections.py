@@ -26,7 +26,7 @@ LOGGER = singer.get_logger()
 
 
 class DynamoDBProjections(TestDynamoDBBase):
-    def expected_table_config():
+    def expected_table_config(self):
         return [
             {'TableName': 'simple_table_1',
             'HashKey': 'int_id',
@@ -42,7 +42,7 @@ class DynamoDBProjections(TestDynamoDBBase):
             'map_projection': {'map_field': {'map_entry_1': 'map_value_1'}}
             },
         ]
-    def generate_items(num_items):
+    def generate_items(self, num_items):
         serializer = TypeSerializer()
         for i in range(num_items):
             record = {
@@ -244,6 +244,6 @@ class DynamoDBProjections(TestDynamoDBBase):
                               endpoint_url='http://localhost:8000',
                               region_name='us-east-1')
 
-        clear_tables(client)
+        self.clear_tables(client)
 
 SCENARIOS.add(DynamoDBProjections)

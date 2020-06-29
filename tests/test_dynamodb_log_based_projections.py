@@ -41,6 +41,35 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
             }
         ]
 
+    def generate_items(self, num_items, start_key = 0):
+        serializer = TypeSerializer()
+        for i in range(start_key, start_key + num_items):
+            record = {
+                'int_id': i,
+                'decimal_field': decimal.Decimal(str(i) + '.00000000001'),
+                'string_field': self.random_string_generator(),
+                'byte_field': b'some_bytes',
+                'int_list_field': [i, i+1, i+2],
+                'int_set_field': set([i, i+1, i+2]),
+                'map_field': {
+                    'map_entry_1': 'map_value_1',
+                    'map_entry_2': 'map_value_2',
+                    'list_entry': [i, i+1, i+2]
+                },
+                'list_map': [
+                    {'a': 1,
+                    'b': 2},
+                    {'a': 100,
+                    'b': 200}
+                ],
+                'string_list': [self.random_string_generator(), self.random_string_generator(), self.random_string_generator()],
+                'boolean_field': True,
+                'other_boolean_field': False,
+                'null_field': None
+            }
+            yield serializer.serialize(record)
+
+
     def setUp(self):
         client = boto3.client('dynamodb',
                               endpoint_url='http://localhost:8000',

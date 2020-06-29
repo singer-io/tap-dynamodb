@@ -5,6 +5,9 @@ import tap_tester.runner      as runner
 import csv
 import boto3
 import singer
+import decimal
+
+from boto3.dynamodb.types import TypeSerializer
 
 from base import TestDynamoDBBase
 
@@ -22,6 +25,27 @@ class DynamoDBFullTableInterruptible(TestDynamoDBBase):
             'generator': self.generate_items,
             'num_rows': 3531},
         ]
+
+    def generate_items(self, num_items):
+        serializer = TypeSerializer()
+        for i in range(num_items):
+            record = {
+                'int_id': int(i/10.0),
+                'decimal_field': decimal.Decimal(str(i) + '.00000000001'),
+                'string_field': str(i),
+                'byte_field': b'some_bytes',
+                'int_list_field': [i, i+1, i+2],
+                'int_set_field': set([i, i+1, i+2]),
+                'map_field': {
+                    'map_entry_1': 'map_value_1',
+                    'map_entry_2': 'map_value_2'
+                },
+                'string_list': [self.random_string_generator(), self.random_string_generator(), self.random_string_generator()],
+                'boolean_field': True,
+                'other_boolean_field': False,
+                'null_field': None
+            }
+            yield serializer.serialize(record)
 
     def setUp(self):
         client = boto3.client('dynamodb',
@@ -41,9 +65,12 @@ class DynamoDBFullTableInterruptible(TestDynamoDBBase):
                               table.get('SortType'))
 
         waiter = client.get_waiter('table_exists')
+        existing_table_names = client.list_tables()['TableNames']
+        LOGGER.info('Existing tables right now: {}'.format(existing_table_names))
         for table in table_configs:
-            LOGGER.info('Adding Items for {}'.format(table['TableName']))
+            LOGGER.info('Adding Items for {}, first waiting for it to exist'.format(table['TableName']))
             waiter.wait(TableName=table['TableName'], WaiterConfig={"Delay": 1, "MaxAttempts": 20})
+            LOGGER.info('Now generating items to fill table with for test')
             for item in table['generator'](table['num_rows']):
                 client.put_item(TableName=table['TableName'], Item=item['M'])
 

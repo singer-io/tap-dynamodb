@@ -52,7 +52,9 @@ class TestDynamoDBBase(unittest.TestCase):
         print('Finished creating table: {}'.format(table_name))
 
     def clear_tables(self, client, table_names=ALL_TABLE_NAMES_TO_CLEAR):
-        for table_name in table_names:
+        existing_table_names = client.list_tables()['TableNames']
+        existing_table_names_to_clear = table_names.intersection(set(existing_table_names))
+        for table_name in existing_table_names_to_clear:
             try:
                 table = client.delete_table(TableName=table_name)
             except Exception as e:
@@ -60,14 +62,11 @@ class TestDynamoDBBase(unittest.TestCase):
 
         # wait for all tables to be deleted
         waiter = client.get_waiter('table_not_exists')
-        for table_name in table_names:
+        for table_name in existing_table_names_to_clear:
             try:
                 waiter.wait(TableName=table_name, WaiterConfig={"Delay": 3, "MaxAttempts": 20})        
             except Exception as e:
                 print('\nCould not wait on table {} due to error {}'.format(table_name, e))
-
-        list_tables_output = client.list_tables()['TableNames']
-        print('\nlist_tables output after clearing tables:{}'.format(list_tables_output))
 
     def random_string_generator(self, size=6, chars=string.ascii_uppercase + string.digits):
         return ''.join(random.choice(chars) for x in range(size))
@@ -78,7 +77,7 @@ class TestDynamoDBBase(unittest.TestCase):
             record = {
                 'int_id': i,
                 'decimal_field': decimal.Decimal(str(i) + '.00000000001'),
-                'string_field': random_string_generator(),
+                'string_field': self.random_string_generator(),
                 'byte_field': b'some_bytes',
                 'int_list_field': [i, i+1, i+2],
                 'int_set_field': set([i, i+1, i+2]),
@@ -86,7 +85,7 @@ class TestDynamoDBBase(unittest.TestCase):
                     'map_entry_1': 'map_value_1',
                     'map_entry_2': 'map_value_2'
                 },
-                'string_list': [random_string_generator(), random_string_generator(), random_string_generator()],
+                'string_list': [self.random_string_generator(), self.random_string_generator(), self.random_string_generator()],
                 'boolean_field': True,
                 'other_boolean_field': False,
                 'null_field': None
