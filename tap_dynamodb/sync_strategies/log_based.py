@@ -1,4 +1,3 @@
-import boto3
 import datetime
 from singer import metadata
 import singer
@@ -10,6 +9,7 @@ LOGGER = singer.get_logger()
 WRITE_STATE_PERIOD = 1000
 
 SDC_DELETED_AT = "_sdc_deleted_at"
+
 
 def get_shards(streams_client, stream_arn):
     '''
@@ -43,6 +43,7 @@ def get_shards(streams_client, stream_arn):
         if has_more:
             params['ExclusiveStartShardId'] = last_evaluated_shard_id
 
+
 def get_shard_records(streams_client, stream_arn, shard, sequence_number):
     '''
     This should only be called on closed shards. Calling this on an open
@@ -68,14 +69,13 @@ def get_shard_records(streams_client, stream_arn, shard, sequence_number):
 
     # This will loop indefinitely if called on open shards
     while shard_iterator is not None:
-
-        LOGGER.info("Retreiving records for shard iterator: %s", shard_iterator)
         records = streams_client.get_records(ShardIterator=shard_iterator, Limit=1000)
 
         for record in records['Records']:
             yield record
 
         shard_iterator = records.get('NextShardIterator')
+
 
 def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projection, deserializer, table_name, stream_version, state):
     seq_number = seq_number_bookmarks.get(shard['ShardId'])
