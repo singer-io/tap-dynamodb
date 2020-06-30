@@ -145,7 +145,7 @@ def sync(config, state, stream):
     # killed by DynamoDB and will not be returned anymore
     finished_shard_bookmarks = singer.get_bookmark(state, table_name, 'finished_shards')
     if not finished_shard_bookmarks:
-        finished_shard_bookmarks = []
+        finished_shard_bookmarks = list()
 
     # The list of shardIds we found this sync. Is used to determine which
     # finished_shard_bookmarks to kill
@@ -174,10 +174,10 @@ def sync(config, state, stream):
             state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
             singer.write_state(state)
 
-    for shard in finished_shard_bookmarks:
-        if shard not in found_shards:
+    for shardId in finished_shard_bookmarks:
+        if shardId not in found_shards:
             # Remove this shard because its no longer appearing when we query for get_shards
-            finished_shard_bookmarks.remove(shard)
+            finished_shard_bookmarks.remove(shardId)
             state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
 
     singer.write_state(state)
@@ -223,7 +223,7 @@ def get_initial_bookmarks(config, state, table_name):
     table = client.describe_table(TableName=table_name)['Table']
     stream_arn = table['LatestStreamArn']
 
-    finished_shard_bookmarks = [shard for shard in get_shards(streams_client, stream_arn)]
+    finished_shard_bookmarks = [shard['ShardId'] for shard in get_shards(streams_client, stream_arn)]
     state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
 
     return state

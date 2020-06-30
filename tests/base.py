@@ -160,7 +160,7 @@ class TestDynamoDBBase(unittest.TestCase):
         table_configs = self.expected_table_config()
 
         for table in table_configs:
-            LOGGER.info('Adding Items for {}'.format(table['TableName']))
+            LOGGER.info('Adding {} Items for {}'.format(numRows, table['TableName']))
             for item in table['generator'](numRows, table['num_rows']):
                 client.put_item(TableName=table['TableName'], Item=item['M'])
 
@@ -170,7 +170,7 @@ class TestDynamoDBBase(unittest.TestCase):
         table_configs = self.expected_table_config()
 
         for table in table_configs:
-            LOGGER.info('Adding Items for {}'.format(table['TableName']))
+            LOGGER.info('Updating {} Items for {}'.format(numRows, table['TableName']))
             for item in table['generator'](numRows):
                 client.put_item(TableName=table['TableName'], Item=item['M'])
 

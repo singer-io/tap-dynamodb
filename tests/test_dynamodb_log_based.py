@@ -204,8 +204,6 @@ class DynamoDBLogBased(TestDynamoDBBase):
         self.deleteData(range(100, 110))
         # Change some rows
         self.updateData(10)
-        # Force streams and shards closed
-        self.disableStreams(expected_streams)
 
         ################################
         # Run sync again and check that records did come through
