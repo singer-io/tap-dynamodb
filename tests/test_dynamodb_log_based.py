@@ -201,7 +201,7 @@ class DynamoDBLogBased(TestDynamoDBBase):
         # Add 10 rows to the DB
         self.addMoreData(10)
         # Delete some rows
-        self.deleteData(range(100, 110))
+        self.deleteData(range(40, 50))
         # Change some rows
         self.updateData(10)
 
@@ -220,6 +220,7 @@ class DynamoDBLogBased(TestDynamoDBBase):
 
         # Check that we have 31 messages come through (10 upserts, 10 deletes, 10 updated records and 1 activate version)
         for stream in records_by_stream.values():
+            LOGGER.info("stream={}".format(stream))
             self.assertEqual(31, len(stream['messages']))
 
         state = menagerie.get_state(conn_id)

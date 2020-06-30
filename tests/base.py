@@ -169,15 +169,24 @@ class TestDynamoDBBase(unittest.TestCase):
 
         table_configs = self.expected_table_config()
 
+        newId = 200
         for table in table_configs:
             LOGGER.info('Updating {} Items for {}'.format(numRows, table['TableName']))
             for item in table['generator'](numRows):
-                client.put_item(TableName=table['TableName'], Item=item['M'])
+                client.update_item(TableName=table['TableName'],
+                                   Key=item['M'],
+                                   UpdateExpression='SET int_id = :newId',
+                                   ExpressionAttributeValues={
+                                       ':newId': {'N': str(newId)},
+                                   },
+                )
+                newId = newId + 1
 
     def deleteData(self, id_range):
         client = self.dynamodb_client()
 
         for table in self.expected_table_config():
+            LOGGER.info('Deleting {} Items for {}'.format(len(id_range), table['TableName']))
             for id in id_range:
                 client.delete_item(TableName=table['TableName'],
                                    Key={'int_id': {
