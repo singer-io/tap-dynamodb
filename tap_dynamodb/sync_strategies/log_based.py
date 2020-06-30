@@ -223,7 +223,7 @@ def get_initial_bookmarks(config, state, table_name):
     table = client.describe_table(TableName=table_name)['Table']
     stream_arn = table['LatestStreamArn']
 
-    for shard in get_shards(streams_client, stream_arn):
-        state = singer.write_bookmark(state, table_name, 'finished_shards', shard)
+    finished_shard_bookmarks = [shard for shard in get_shards(streams_client, stream_arn)]
+    state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
 
     return state
