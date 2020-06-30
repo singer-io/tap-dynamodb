@@ -16,8 +16,9 @@ import json
 from datetime import datetime, timedelta, timezone
 from singer import utils, metadata
 import singer
-
 import decimal
+
+from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
 
 from base import TestDynamoDBBase
 
@@ -46,7 +47,7 @@ class DynamoDBDiscovery(TestDynamoDBBase):
              'HashType': 'N'},
         ]
 
-    def generate_simple_items_1(num_items):
+    def generate_simple_items_1(self, num_items):
         serializer = TypeSerializer()
         for i in range(num_items):
             record = {
@@ -55,7 +56,7 @@ class DynamoDBDiscovery(TestDynamoDBBase):
             }
             yield serializer.serialize(record)
 
-    def generate_simple_items_2(num_items):
+    def generate_simple_items_2(self, num_items):
         serializer = TypeSerializer()
         for i in range(num_items):
             record = {
