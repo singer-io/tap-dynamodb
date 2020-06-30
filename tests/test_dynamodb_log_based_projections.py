@@ -15,8 +15,9 @@ import json
 from datetime import datetime, timedelta, timezone
 from singer import utils, metadata
 import singer
-
 import decimal
+
+from boto3.dynamodb.types import TypeSerializer
 
 from base import TestDynamoDBBase
 
@@ -69,22 +70,6 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
 
     def name(self):
         return "tap_tester_dynamodb_log_based_projections"
-
-    def tap_name(self):
-        return "tap-dynamodb"
-
-    def get_type(self):
-        return "platform.dynamodb"
-
-    def get_properties(self):
-        return {
-            "use_local_dynamo": 'true',
-            "account_id": "123123123123",
-            "region_name": "us-east-1"
-        }
-
-    def get_credentials(self):
-        return {}
 
     def test_run(self):
         conn_id = connections.ensure_connection(self)
@@ -164,7 +149,10 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
         ###################################
         # SYNC MODE FIRST RUN
         ###################################
+        # Disable streams forces shards to close
+        self.disableStreams(expected_streams)
         sync_job_name = runner.run_sync_mode(self, conn_id)
+        self.enableStreams(expected_streams)
 
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
@@ -225,7 +213,10 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
         ################################
         # Run sync SECOND TIME and check that no records came through
         ################################
+        # Disable streams forces shards to close
+        self.disableStreams(expected_streams)
         sync_job_name = runner.run_sync_mode(self, conn_id)
+        self.enableStreams(expected_streams)
 
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
@@ -243,13 +234,15 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
         # Add 10 rows to the DB
         self.addMoreData(10)
         # Delete some rows
-        self.deleteData(range(100, 110))
+        self.deleteData(range(40, 50))
         # Change some rows
-        self.updateData(10)
+        self.updateData(10, 60, 'boolean_field', False)
 
         ################################
         # Run sync THIRD TIME and check that records did come through
         ################################
+        # Disable streams forces shards to close
+        self.disableStreams(expected_streams)
         sync_job_name = runner.run_sync_mode(self, conn_id)
 
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)

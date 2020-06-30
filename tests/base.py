@@ -4,7 +4,7 @@ import unittest
 import string
 
 import boto3
-from boto3.dynamodb.types import TypeSerializer
+from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
 
 import singer
 
@@ -45,6 +45,22 @@ class TestDynamoDBBase(unittest.TestCase):
 
     def tearDown(self):
         self.clear_tables(self.dynamodb_client())
+
+    def tap_name(self):
+        return "tap-dynamodb"
+
+    def get_type(self):
+        return "platform.dynamodb"
+
+    def get_properties(self):
+        return {
+            "use_local_dynamo": 'true',
+            "account_id": "123123123123",
+            "region_name": "us-east-1"
+        }
+
+    def get_credentials(self):
+        return {}
     
     def dynamodb_client(self):
         if not self._client:
@@ -110,27 +126,6 @@ class TestDynamoDBBase(unittest.TestCase):
     def random_string_generator(self, size=6, chars=string.ascii_uppercase + string.digits):
         return ''.join(random.choice(chars) for x in range(size))
 
-    def generate_items(self, num_items):
-        serializer = TypeSerializer()
-        for i in range(num_items):
-            record = {
-                'int_id': i,
-                'decimal_field': decimal.Decimal(str(i) + '.00000000001'),
-                'string_field': self.random_string_generator(),
-                'byte_field': b'some_bytes',
-                'int_list_field': [i, i+1, i+2],
-                'int_set_field': set([i, i+1, i+2]),
-                'map_field': {
-                    'map_entry_1': 'map_value_1',
-                    'map_entry_2': 'map_value_2'
-                },
-                'string_list': [self.random_string_generator(), self.random_string_generator(), self.random_string_generator()],
-                'boolean_field': True,
-                'other_boolean_field': False,
-                'null_field': None
-            }
-            yield serializer.serialize(record)
-
     def enableStreams(self, table_names):
         client = self.dynamodb_client()
 
@@ -164,23 +159,30 @@ class TestDynamoDBBase(unittest.TestCase):
             for item in table['generator'](numRows, table['num_rows']):
                 client.put_item(TableName=table['TableName'], Item=item['M'])
 
-    def updateData(self, numRows):
+    def updateData(self, numRows, start_key, field_key, field_value):
         client = self.dynamodb_client()
+        deserializer = TypeDeserializer()
+        serializer = TypeSerializer()
 
         table_configs = self.expected_table_config()
 
-        newId = 200
         for table in table_configs:
-            LOGGER.info('Updating {} Items for {}'.format(numRows, table['TableName']))
-            for item in table['generator'](numRows):
+            LOGGER.info('Updating {} Items by setting field with key {} to the value {}, with start_key {}, for table {}'.format(numRows, field_key, field_value, start_key, table['TableName']))
+            for item in table['generator'](numRows, start_key):
+                record = deserializer.deserialize(item)
+                hashKey = table['HashKey']
+                key = {
+                    hashKey: serializer.serialize(record[hashKey])
+                }
+                serializedFieldValue = serializer.serialize(field_value)
+                # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb.html#DynamoDB.Client.update_item
                 client.update_item(TableName=table['TableName'],
-                                   Key=item['M'],
-                                   UpdateExpression='SET int_id = :newId',
+                                   Key=key,
+                                   UpdateExpression='set field_key=:v'.format(field_key),
                                    ExpressionAttributeValues={
-                                       ':newId': {'N': str(newId)},
+                                       ':v': serializedFieldValue,
                                    },
                 )
-                newId = newId + 1
 
     def deleteData(self, id_range):
         client = self.dynamodb_client()

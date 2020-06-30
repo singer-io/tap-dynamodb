@@ -73,22 +73,6 @@ class DynamoDBProjections(TestDynamoDBBase):
     def name(self):
         return "tap_tester_dynamodb_projections"
 
-    def tap_name(self):
-        return "tap-dynamodb"
-
-    def get_type(self):
-        return "platform.dynamodb"
-
-    def get_properties(self):
-        return {
-            "use_local_dynamo": 'true',
-            "account_id": "123123123123",
-            "region_name": "us-east-1"
-        }
-
-    def get_credentials(self):
-        return {}
-
     def test_run(self):
         conn_id = connections.ensure_connection(self)
 

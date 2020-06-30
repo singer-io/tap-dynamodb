@@ -27,21 +27,25 @@ class DynamoDBDiscovery(TestDynamoDBBase):
     def expected_table_config(self):
         return [
             {'TableName': 'simple_table_1',
-            'HashKey': 'int_id',
-            'HashType': 'N',
-            'SortKey': 'string_field',
-            'SortType': 'S',
-            'generator': self.generate_simple_items_1},
+             'HashKey': 'int_id',
+             'HashType': 'N',
+             'SortKey': 'string_field',
+             'SortType': 'S',
+             'generator': self.generate_simple_items_1,
+             'num_rows': 50,
+            },
             {'TableName': 'simple_table_2',
-            'HashKey': 'string_id',
-            'HashType': 'S',
-            'SortKey': 'int_field',
-            'generator': self.generate_simple_items_2,
-            'SortType': 'N'},
+             'HashKey': 'string_id',
+             'HashType': 'S',
+             'SortKey': 'int_field',
+             'generator': self.generate_simple_items_2,
+             'num_rows': 50,
+             'SortType': 'N'},
             {'TableName': 'simple_table_3',
-            'HashKey': 'int_id',
-            'generator': self.generate_simple_items_1,
-            'HashType': 'N'},
+             'HashKey': 'int_id',
+             'generator': self.generate_simple_items_1,
+             'num_rows': 50,
+             'HashType': 'N'},
         ]
 
     def generate_simple_items_1(self, num_items):
@@ -57,22 +61,6 @@ class DynamoDBDiscovery(TestDynamoDBBase):
 
     def name(self):
         return "tap_tester_dynamodb_discovery"
-
-    def tap_name(self):
-        return "tap-dynamodb"
-
-    def get_type(self):
-        return "platform.dynamodb"
-
-    def get_properties(self):
-        return {
-            "use_local_dynamo": 'true',
-            "account_id": "123123123123",
-            "region_name": "us-east-1"
-        }
-
-    def get_credentials(self):
-        return {}
 
     def test_run(self):
         conn_id = connections.ensure_connection(self)

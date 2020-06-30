@@ -40,27 +40,13 @@ class DynamoDBLogBased(TestDynamoDBBase):
         for i in range(start_key, start_key + num_items):
             record = {
                 'int_id': i,
+                'string_field': self.random_string_generator(),
+                'boolean_field': True,
             }
             yield serializer.serialize(record)
 
     def name(self):
         return "tap_tester_dynamodb_log_based"
-
-    def tap_name(self):
-        return "tap-dynamodb"
-
-    def get_type(self):
-        return "platform.dynamodb"
-
-    def get_properties(self):
-        return {
-            "use_local_dynamo": 'true',
-            "account_id": "123123123123",
-            "region_name": "us-east-1"
-        }
-
-    def get_credentials(self):
-        return {}
 
     def test_run(self):
         conn_id = connections.ensure_connection(self)
@@ -203,7 +189,7 @@ class DynamoDBLogBased(TestDynamoDBBase):
         # Delete some rows
         self.deleteData(range(40, 50))
         # Change some rows
-        self.updateData(10)
+        self.updateData(10, 60, 'boolean_field', False)
 
         ################################
         # Run sync again and check that records did come through
@@ -220,7 +206,6 @@ class DynamoDBLogBased(TestDynamoDBBase):
 
         # Check that we have 31 messages come through (10 upserts, 10 deletes, 10 updated records and 1 activate version)
         for stream in records_by_stream.values():
-            LOGGER.info("stream={}".format(stream))
             self.assertEqual(31, len(stream['messages']))
 
         state = menagerie.get_state(conn_id)
