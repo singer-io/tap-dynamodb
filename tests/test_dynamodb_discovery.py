@@ -21,8 +21,6 @@ import decimal
 
 from base import TestDynamoDBBase
 
-LOGGER = singer.get_logger()
-    
 class DynamoDBDiscovery(TestDynamoDBBase):
     def expected_table_config(self):
         return [
@@ -48,16 +46,23 @@ class DynamoDBDiscovery(TestDynamoDBBase):
              'HashType': 'N'},
         ]
 
-    def generate_simple_items_1(self, num_items):
+    def generate_simple_items_1(num_items):
+        serializer = TypeSerializer()
         for i in range(num_items):
-            yield {'int_id': { 'N': str(i) },
-                'string_field': {'S': self.random_string_generator() } }
+            record = {
+                'int_id': i,
+                'string_field': self.random_string_generator(),
+            }
+            yield serializer.serialize(record)
 
-
-    def generate_simple_items_2(self, num_items):
+    def generate_simple_items_2(num_items):
+        serializer = TypeSerializer()
         for i in range(num_items):
-            yield {'string_id': { 'S': self.random_string_generator() },
-                'int_field': {'N': str(i) } }
+            record = {
+                'string_id': self.random_string_generator(),
+                'int_field': i,
+            }
+            yield serializer.serialize(record)
 
     def name(self):
         return "tap_tester_dynamodb_discovery"

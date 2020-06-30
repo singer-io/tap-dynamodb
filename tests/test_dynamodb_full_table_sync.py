@@ -18,6 +18,8 @@ from singer import utils, metadata
 import singer
 import decimal
 
+from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
+
 from base import TestDynamoDBBase
 
 LOGGER = singer.get_logger()
@@ -39,7 +41,7 @@ class DynamoDBFullTable(TestDynamoDBBase):
             record = {
                 'int_id': i,
                 'decimal_field': decimal.Decimal(str(i) + '.00000000001'),
-                'string_field': random_string_generator(),
+                'string_field': self.random_string_generator(),
                 'byte_field': b'some_bytes',
                 'int_list_field': [i, i+1, i+2],
                 'int_set_field': set([i, i+1, i+2]),
@@ -47,7 +49,7 @@ class DynamoDBFullTable(TestDynamoDBBase):
                     'map_entry_1': 'map_value_1',
                     'map_entry_2': 'map_value_2'
                 },
-                'string_list': [random_string_generator(), random_string_generator(), random_string_generator()],
+                'string_list': [self.random_string_generator(), self.random_string_generator(), self.random_string_generator()],
                 'boolean_field': True,
                 'other_boolean_field': False,
                 'null_field': None
