@@ -99,14 +99,14 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
                     raise RuntimeError('Projection failed to apply: {}'.format(projection))
 
         record_message = singer.RecordMessage(stream=table_name,
-                                            record=record_message,
-                                            version=stream_version)
+                                              record=record_message,
+                                              version=stream_version)
         singer.write_message(record_message)
 
         rows_synced += 1
 
         # Every 100 rows update bookmarks and write the state
-        if (rows_synced % 100 == 0):
+        if rows_synced % 100 == 0:
             seq_number_bookmarks[shard['ShardId']] = record['dynamodb']['SequenceNumber']
             state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
             singer.write_state(state)
@@ -184,6 +184,7 @@ def sync(config, state, stream):
 
     return rows_synced
 
+
 def has_stream_aged_out(state, table_name):
     '''
     Uses the success_timestamp on the stream to determine if we have
@@ -207,6 +208,7 @@ def has_stream_aged_out(state, table_name):
     # If it has been > than 19h30m since the last successful sync of this
     # stream then we feel confident we have not aged out
     return time_span > datetime.timedelta(hours=19, minutes=30)
+
 
 def get_initial_bookmarks(config, state, table_name):
     '''
