@@ -13,7 +13,6 @@ import pdb
 import paramiko
 import csv
 import json
-import boto3
 from datetime import datetime, timedelta, timezone
 from singer import utils, metadata
 import singer
@@ -55,30 +54,6 @@ class DynamoDBDiscovery(TestDynamoDBBase):
         for i in range(num_items):
             yield {'string_id': { 'S': self.random_string_generator() },
                 'int_field': {'N': str(i) } }
-
-    def setUp(self):
-        client = boto3.client('dynamodb',
-                              endpoint_url='http://localhost:8000',
-                              region_name='us-east-1')
-
-        table_configs = self.expected_table_config()
-
-        self.clear_tables(client)
-
-        for table in table_configs:
-            self.create_table(client,
-                              table['TableName'],
-                              table['HashKey'],
-                              table['HashType'],
-                              table.get('SortKey'),
-                              table.get('SortType'))
-
-        waiter = client.get_waiter('table_exists')
-        for table in table_configs:
-            LOGGER.info('Adding Items for {}'.format(table['TableName']))
-            waiter.wait(TableName=table['TableName'], WaiterConfig={"Delay": 1, "MaxAttempts": 20})        
-            for item in table['generator'](50):
-                client.put_item(TableName=table['TableName'], Item=item)
 
     def name(self):
         return "tap_tester_dynamodb_discovery"
@@ -153,12 +128,5 @@ class DynamoDBDiscovery(TestDynamoDBBase):
 
             # no forced-replication-method metadata
             self.assertNotIn('forced-replication-method', stream_metadata.keys())
-
-
-        client = boto3.client('dynamodb',
-                              endpoint_url='http://localhost:8000',
-                              region_name='us-east-1')
-
-        self.clear_tables(client)
 
 SCENARIOS.add(DynamoDBDiscovery)

@@ -144,7 +144,7 @@ def sync(config, state, stream):
     # returned by get_shards() because at that point the shard has been
     # killed by DynamoDB and will not be returned anymore
     finished_shard_bookmarks = singer.get_bookmark(state, table_name, 'finished_shards')
-    if finished_shard_bookmarks is None:
+    if not finished_shard_bookmarks:
         finished_shard_bookmarks = []
 
     # The list of shardIds we found this sync. Is used to determine which

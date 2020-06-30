@@ -3,7 +3,10 @@ import decimal
 import unittest
 import string
 
+import boto3
 from boto3.dynamodb.types import TypeSerializer
+
+import singer
 
 ALL_TABLE_NAMES_TO_CLEAR = {
     'simple_table_1',
@@ -12,8 +15,44 @@ ALL_TABLE_NAMES_TO_CLEAR = {
     'com-stitchdata-test-dynamodb-integration-simple_table_1',
 }
     
+LOGGER = singer.get_logger()
+
 
 class TestDynamoDBBase(unittest.TestCase):
+    _client = None
+
+    def setUp(self):
+        client = self.dynamodb_client()
+
+        table_configs = self.expected_table_config()
+
+        self.clear_tables(client)
+
+        for table in table_configs:
+            self.create_table(client,
+                              table['TableName'],
+                              table['HashKey'],
+                              table['HashType'],
+                              table.get('SortKey'),
+                              table.get('SortType'))
+
+        waiter = client.get_waiter('table_exists')
+        for table in table_configs:
+            LOGGER.info('Adding Items for {}'.format(table['TableName']))
+            waiter.wait(TableName=table['TableName'], WaiterConfig={"Delay": 1, "MaxAttempts": 20})
+            for item in table['generator'](table['num_rows']):
+                client.put_item(TableName=table['TableName'], Item=item['M'])
+
+    def tearDown(self):
+        self.clear_tables(self.dynamodb_client())
+    
+    def dynamodb_client(self):
+        if not self._client:
+            self._client = boto3.client('dynamodb',
+                                   endpoint_url='http://localhost:8000',
+                                   region_name='us-east-1')
+        return self._client
+    
     def create_table(self, client, table_name, hash_key, hash_type, sort_key, sort_type):
         self.assertIn(table_name, ALL_TABLE_NAMES_TO_CLEAR)
         print('\nCreating table: {}'.format(table_name))
@@ -92,4 +131,55 @@ class TestDynamoDBBase(unittest.TestCase):
             }
             yield serializer.serialize(record)
 
+    def enableStreams(self, table_names):
+        client = self.dynamodb_client()
+
+        for table_name in table_names:
+            client.update_table(
+                TableName=table_name,
+                StreamSpecification={
+                    'StreamEnabled': True,
+                    'StreamViewType': 'NEW_IMAGE'
+                },
+            )
+
+    def disableStreams(self, table_names):
+        client = self.dynamodb_client()
+
+        for table_name in table_names:
+            client.update_table(
+                TableName=table_name,
+                StreamSpecification={
+                    'StreamEnabled': False,
+                },
+            )
+
+    def addMoreData(self, numRows):
+        client = self.dynamodb_client()
+
+        table_configs = self.expected_table_config()
+
+        for table in table_configs:
+            LOGGER.info('Adding Items for {}'.format(table['TableName']))
+            for item in table['generator'](numRows, table['num_rows']):
+                client.put_item(TableName=table['TableName'], Item=item['M'])
+
+    def updateData(self, numRows):
+        client = self.dynamodb_client()
+
+        table_configs = self.expected_table_config()
+
+        for table in table_configs:
+            LOGGER.info('Adding Items for {}'.format(table['TableName']))
+            for item in table['generator'](numRows):
+                client.put_item(TableName=table['TableName'], Item=item['M'])
+
+    def deleteData(self, id_range):
+        client = self.dynamodb_client()
+
+        for table in self.expected_table_config():
+            for id in id_range:
+                client.delete_item(TableName=table['TableName'],
+                                   Key={'int_id': {
+                                       'N': str(id)}})
 

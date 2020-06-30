@@ -12,8 +12,6 @@ import pdb
 import paramiko
 import csv
 import json
-import boto3
-from boto3.dynamodb.types import TypeSerializer
 from datetime import datetime, timedelta, timezone
 from singer import utils, metadata
 import singer
@@ -68,66 +66,6 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
                 'null_field': None
             }
             yield serializer.serialize(record)
-
-
-    def setUp(self):
-        client = boto3.client('dynamodb',
-                              endpoint_url='http://localhost:8000',
-                              region_name='us-east-1')
-
-        table_configs = self.expected_table_config()
-
-        self.clear_tables(client)
-
-        for table in table_configs:
-            self.create_table(client,
-                              table['TableName'],
-                              table['HashKey'],
-                              table['HashType'],
-                              table.get('SortKey'),
-                              table.get('SortType'))
-
-        waiter = client.get_waiter('table_exists')
-        for table in table_configs:
-            LOGGER.info('Adding Items for {}'.format(table['TableName']))
-            waiter.wait(TableName=table['TableName'], WaiterConfig={"Delay": 1, "MaxAttempts": 20})
-            for item in table['generator'](table['num_rows']):
-                client.put_item(TableName=table['TableName'], Item=item['M'])
-
-    def addMoreData(self, numRows):
-        client = boto3.client('dynamodb',
-                              endpoint_url='http://localhost:8000',
-                              region_name='us-east-1')
-
-        table_configs = self.expected_table_config()
-
-        for table in table_configs:
-            LOGGER.info('Adding Items for {}'.format(table['TableName']))
-            for item in table['generator'](numRows, table['num_rows']):
-                client.put_item(TableName=table['TableName'], Item=item['M'])
-
-    def updateData(self, numRows):
-        client = boto3.client('dynamodb',
-                              endpoint_url='http://localhost:8000',
-                              region_name='us-east-1')
-
-        table_configs = self.expected_table_config()
-
-        for table in table_configs:
-            LOGGER.info('Adding Items for {}'.format(table['TableName']))
-            for item in table['generator'](numRows):
-                client.put_item(TableName=table['TableName'], Item=item['M'])
-
-    def deleteData(self, id_range):
-        client = boto3.client('dynamodb',
-                              endpoint_url='http://localhost:8000',
-                              region_name='us-east-1')
-
-        for table in expected_table_config():
-            for id in id_range:
-                client.delete_item(TableName=table['TableName'],
-                                   Key={'int_id': {
-                                       'N': str(id)}})
 
     def name(self):
         return "tap_tester_dynamodb_log_based_projections"
@@ -338,12 +276,5 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
             self.assertEqual(31, len(stream['messages']))
 
         state = menagerie.get_state(conn_id)
-
-        # TODO Check log based things
-        client = boto3.client('dynamodb',
-                              endpoint_url='http://localhost:8000',
-                              region_name='us-east-1')
-
-        self.clear_tables(client)
 
 SCENARIOS.add(DynamoDBLogBasedProjections)

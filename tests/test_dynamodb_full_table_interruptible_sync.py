@@ -3,13 +3,12 @@ import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 import csv
-import boto3
 import singer
 import decimal
 
-from boto3.dynamodb.types import TypeSerializer
-
 from base import TestDynamoDBBase
+
+from boto3.dynamodb.types import TypeSerializer
 
 LOGGER = singer.get_logger()
 
@@ -46,33 +45,6 @@ class DynamoDBFullTableInterruptible(TestDynamoDBBase):
                 'null_field': None
             }
             yield serializer.serialize(record)
-
-    def setUp(self):
-        client = boto3.client('dynamodb',
-                              endpoint_url='http://localhost:8000',
-                              region_name='us-east-1')
-
-        table_configs = self.expected_table_config()
-
-        self.clear_tables(client)
-
-        for table in table_configs:
-            self.create_table(client,
-                              table['TableName'],
-                              table['HashKey'],
-                              table['HashType'],
-                              table.get('SortKey'),
-                              table.get('SortType'))
-
-        waiter = client.get_waiter('table_exists')
-        existing_table_names = client.list_tables()['TableNames']
-        LOGGER.info('Existing tables right now: {}'.format(existing_table_names))
-        for table in table_configs:
-            LOGGER.info('Adding Items for {}, first waiting for it to exist'.format(table['TableName']))
-            waiter.wait(TableName=table['TableName'], WaiterConfig={"Delay": 1, "MaxAttempts": 20})
-            LOGGER.info('Now generating items to fill table with for test')
-            for item in table['generator'](table['num_rows']):
-                client.put_item(TableName=table['TableName'], Item=item['M'])
 
     def name(self):
         return "tap_tester_dynamodb_full_table_interruptible"
@@ -229,12 +201,5 @@ class DynamoDBFullTableInterruptible(TestDynamoDBBase):
 
             
             self.assertTrue(state['bookmarks'][table_name].get('initial_full_table_complete', False))
-
-        client = boto3.client('dynamodb',
-                              endpoint_url='http://localhost:8000',
-                              region_name='us-east-1')
-
-
-        self.clear_tables(client)
 
 SCENARIOS.add(DynamoDBFullTableInterruptible)
