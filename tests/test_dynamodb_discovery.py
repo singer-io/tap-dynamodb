@@ -1,25 +1,9 @@
+from boto3.dynamodb.types import TypeSerializer
+
 from tap_tester.scenario import (SCENARIOS)
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
-import os
-import unittest
-import string
-import random
-import time
-import re
-import pprint
-import pdb
-import paramiko
-import csv
-import json
-from datetime import datetime, timedelta, timezone
-from singer import utils, metadata
-import singer
-import decimal
-
-from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
-
 from base import TestDynamoDBBase
 
 class DynamoDBDiscovery(TestDynamoDBBase):
@@ -65,7 +49,8 @@ class DynamoDBDiscovery(TestDynamoDBBase):
             }
             yield serializer.serialize(record)
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_dynamodb_discovery"
 
     def test_run(self):
@@ -96,7 +81,7 @@ class DynamoDBDiscovery(TestDynamoDBBase):
 
         for tap_stream_id in expected_streams:
             found_stream = [c for c in catalog['streams'] if c['tap_stream_id'] == tap_stream_id][0]
-            stream_metadata = [x['metadata'] for x in found_stream['metadata'] if x['breadcrumb']==[]][0]
+            stream_metadata = [x['metadata'] for x in found_stream['metadata'] if x['breadcrumb'] == []][0]
             expected_config = [x for x in table_configs if x['TableName'] == tap_stream_id][0]
 
             # table-key-properties metadata

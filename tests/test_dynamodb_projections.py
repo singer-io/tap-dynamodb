@@ -1,25 +1,12 @@
+import decimal
+import singer
+
+from boto3.dynamodb.types import TypeSerializer
+
 from tap_tester.scenario import (SCENARIOS)
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
-import os
-import unittest
-import string
-import random
-import time
-import re
-import pprint
-import pdb
-import paramiko
-import csv
-import json
-from datetime import datetime, timedelta, timezone
-from singer import utils, metadata
-import singer
-import decimal
-
-from boto3.dynamodb.types import TypeSerializer
-
 from base import TestDynamoDBBase
 
 LOGGER = singer.get_logger()
@@ -29,19 +16,20 @@ class DynamoDBProjections(TestDynamoDBBase):
     def expected_table_config(self):
         return [
             {'TableName': 'simple_table_1',
-            'HashKey': 'int_id',
-            'HashType': 'N',
-            'SortKey': 'string_field',
-            'SortType': 'S',
-            'generator': self.generate_items,
-            'num_rows': 100,
-            'ProjectionExpression': 'int_id, string_field, decimal_field, int_list_field[1], map_field.map_entry_1, string_list[2], map_field.list_entry[2], list_map[1].a',
-            'top_level_keys': {'int_id', 'string_field', 'decimal_field', 'int_list_field', 'map_field', 'string_list', 'list_map'},
-            'top_level_list_keys': {'int_list_field', 'string_list', 'list_map'},
-            'nested_map_keys': {'map_field': {'map_entry_1', 'list_entry'}},
-            'map_projection': {'map_field': {'map_entry_1': 'map_value_1'}}
+             'HashKey': 'int_id',
+             'HashType': 'N',
+             'SortKey': 'string_field',
+             'SortType': 'S',
+             'generator': self.generate_items,
+             'num_rows': 100,
+             'ProjectionExpression': 'int_id, string_field, decimal_field, int_list_field[1], map_field.map_entry_1, string_list[2], map_field.list_entry[2], list_map[1].a',
+             'top_level_keys': {'int_id', 'string_field', 'decimal_field', 'int_list_field', 'map_field', 'string_list', 'list_map'},
+             'top_level_list_keys': {'int_list_field', 'string_list', 'list_map'},
+             'nested_map_keys': {'map_field': {'map_entry_1', 'list_entry'}},
+             'map_projection': {'map_field': {'map_entry_1': 'map_value_1'}}
             },
         ]
+
     def generate_items(self, num_items):
         serializer = TypeSerializer()
         for i in range(num_items):
@@ -59,9 +47,9 @@ class DynamoDBProjections(TestDynamoDBBase):
                 },
                 'list_map': [
                     {'a': 1,
-                    'b': 2},
+                     'b': 2},
                     {'a': 100,
-                    'b': 200}
+                     'b': 200}
                 ],
                 'string_list': [self.random_string_generator(), self.random_string_generator(), self.random_string_generator()],
                 'boolean_field': True,
@@ -70,7 +58,8 @@ class DynamoDBProjections(TestDynamoDBBase):
             }
             yield serializer.serialize(record)
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_dynamodb_projections"
 
     def test_run(self):
@@ -101,7 +90,7 @@ class DynamoDBProjections(TestDynamoDBBase):
 
         for tap_stream_id in expected_streams:
             found_stream = [c for c in catalog['streams'] if c['tap_stream_id'] == tap_stream_id][0]
-            stream_metadata = [x['metadata'] for x in found_stream['metadata'] if x['breadcrumb']==[]][0]
+            stream_metadata = [x['metadata'] for x in found_stream['metadata'] if x['breadcrumb'] == []][0]
             expected_config = [x for x in table_configs if x['TableName'] == tap_stream_id][0]
 
             # table-key-properties metadata
@@ -135,14 +124,14 @@ class DynamoDBProjections(TestDynamoDBBase):
         for stream_catalog in found_catalogs:
             expected_config = [x for x in table_configs if x['TableName'] == stream_catalog['tap_stream_id']][0]
             annotated_schema = menagerie.get_annotated_schema(conn_id, stream_catalog['stream_id'])
-            additional_md = [{ "breadcrumb" : [], "metadata" : {
+            additional_md = [{"breadcrumb" : [], "metadata" : {
                 'replication-method' : 'FULL_TABLE',
                 'tap-mongodb.projection': expected_config['ProjectionExpression']
             }}]
-            selected_metadata = connections.select_catalog_and_fields_via_metadata(conn_id,
-                                                                                   stream_catalog,
-                                                                                   annotated_schema,
-                                                                                   additional_md)
+            connections.select_catalog_and_fields_via_metadata(conn_id,
+                                                               stream_catalog,
+                                                               annotated_schema,
+                                                               additional_md)
 
         # run full table sync
         sync_job_name = runner.run_sync_mode(self, conn_id)
@@ -156,15 +145,15 @@ class DynamoDBProjections(TestDynamoDBBase):
         expected_pks = {}
 
         for config in table_configs:
-            key = { config['HashKey'] }
+            key = {config['HashKey']}
             if config.get('SortKey'):
-                key |= { config.get('SortKey') }
+                key |= {config.get('SortKey')}
             expected_pks[config['TableName']] = key
 
         # assert that each of the streams that we synced are the ones that we expect to see
         record_count_by_stream = runner.examine_target_output_file(self,
                                                                    conn_id,
-                                                                   { x['TableName'] for x in table_configs },
+                                                                   {x['TableName'] for x in table_configs},
                                                                    expected_pks)
 
         state = menagerie.get_state(conn_id)

@@ -1,24 +1,13 @@
+import decimal
+
+import singer
+
+from boto3.dynamodb.types import TypeSerializer
+
 from tap_tester.scenario import (SCENARIOS)
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
-import os
-import unittest
-import string
-import random
-import time
-import re
-import pprint
-import pdb
-import paramiko
-import csv
-import json
-from datetime import datetime, timedelta, timezone
-from singer import utils, metadata
-import singer
-import decimal
-
-from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
 
 from base import TestDynamoDBBase
 
@@ -27,15 +16,15 @@ class DynamoDBFullTable(TestDynamoDBBase):
     def expected_table_config(self):
         return [
             {'TableName': 'simple_table_1',
-            'HashKey': 'int_id',
-            'HashType': 'N',
-            'SortKey': 'string_field',
-            'SortType': 'S',
-            'generator': self.generate_items,
-            'num_rows': 3531},
+             'HashKey': 'int_id',
+             'HashType': 'N',
+             'SortKey': 'string_field',
+             'SortType': 'S',
+             'generator': self.generate_items,
+             'num_rows': 3531},
         ]
 
-    def generate_items(num_items):
+    def generate_items(self, num_items):
         serializer = TypeSerializer()
         for i in range(num_items):
             record = {
@@ -56,7 +45,8 @@ class DynamoDBFullTable(TestDynamoDBBase):
             }
             yield serializer.serialize(record)
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_dynamodb_full_table"
 
     def test_run(self):
@@ -87,7 +77,7 @@ class DynamoDBFullTable(TestDynamoDBBase):
 
         for tap_stream_id in expected_streams:
             found_stream = [c for c in catalog['streams'] if c['tap_stream_id'] == tap_stream_id][0]
-            stream_metadata = [x['metadata'] for x in found_stream['metadata'] if x['breadcrumb']==[]][0]
+            stream_metadata = [x['metadata'] for x in found_stream['metadata'] if x['breadcrumb'] == []][0]
             expected_config = [x for x in table_configs if x['TableName'] == tap_stream_id][0]
 
             # table-key-properties metadata
@@ -120,11 +110,11 @@ class DynamoDBFullTable(TestDynamoDBBase):
         found_catalogs = menagerie.get_catalogs(conn_id)
         for stream_catalog in found_catalogs:
             annotated_schema = menagerie.get_annotated_schema(conn_id, stream_catalog['stream_id'])
-            additional_md = [{ "breadcrumb" : [], "metadata" : {'replication-method' : 'FULL_TABLE'}}]
-            selected_metadata = connections.select_catalog_and_fields_via_metadata(conn_id,
-                                                                                   stream_catalog,
-                                                                                   annotated_schema,
-                                                                                   additional_md)
+            additional_md = [{"breadcrumb" : [], "metadata" : {'replication-method' : 'FULL_TABLE'}}]
+            connections.select_catalog_and_fields_via_metadata(conn_id,
+                                                               stream_catalog,
+                                                               annotated_schema,
+                                                               additional_md)
 
         # run full table sync
         sync_job_name = runner.run_sync_mode(self, conn_id)
@@ -137,15 +127,15 @@ class DynamoDBFullTable(TestDynamoDBBase):
         expected_pks = {}
 
         for config in table_configs:
-            key = { config['HashKey'] }
+            key = {config['HashKey']}
             if config.get('SortKey'):
-                key |= { config.get('SortKey') }
+                key |= {config.get('SortKey')}
             expected_pks[config['TableName']] = key
 
         # assert that each of the streams that we synced are the ones that we expect to see
         record_count_by_stream = runner.examine_target_output_file(self,
                                                                    conn_id,
-                                                                   { x['TableName'] for x in table_configs },
+                                                                   {x['TableName'] for x in table_configs},
                                                                    expected_pks)
 
         state = menagerie.get_state(conn_id)
