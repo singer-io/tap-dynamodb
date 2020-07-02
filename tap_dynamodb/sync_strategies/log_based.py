@@ -171,7 +171,7 @@ def sync(config, state, stream):
         state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
 
         if seq_number_bookmarks.get(shard['ShardId']):
-            seq_number_bookmarks.remove(shard['ShardId'])
+            seq_number_bookmarks.pop(shard['ShardId'])
             state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
 
         singer.write_state(state)
