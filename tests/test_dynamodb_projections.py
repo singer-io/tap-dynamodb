@@ -63,7 +63,7 @@ class DynamoDBProjections(TestDynamoDBBase):
         return "tap_tester_dynamodb_projections"
 
     def test_run(self):
-        (table_configs, conn_id, expected_streams) = self.pre_sync_test()
+        (table_configs, conn_id, _) = self.pre_sync_test()
 
         # Select simple_coll_1 and simple_coll_2 streams and add replication method metadata
         found_catalogs = menagerie.get_catalogs(conn_id)

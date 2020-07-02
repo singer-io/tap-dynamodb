@@ -103,7 +103,7 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
         for stream in messages_by_stream.values():
             self.assertEqual(1, len(stream['messages']))
 
-        state = menagerie.get_state(conn_id)
+        menagerie.get_state(conn_id)
 
         # Add 10 rows to the DB
         self.addMoreData(10)
