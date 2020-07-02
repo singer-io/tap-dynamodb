@@ -106,11 +106,13 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
         rows_synced += 1
 
         # Every 100 rows update bookmarks and write the state
+        seq_number_bookmarks[shard['ShardId']] = record['dynamodb']['SequenceNumber']
+        state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
+
         if rows_synced % 100 == 0:
-            seq_number_bookmarks[shard['ShardId']] = record['dynamodb']['SequenceNumber']
-            state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
             singer.write_state(state)
 
+    singer.write_state(state)
     return rows_synced
 
 
@@ -164,15 +166,15 @@ def sync(config, state, stream):
                                       table_name, stream_version, state)
 
         # Now that we have fully synced the shard, move it from the
-        # shard_seq_numbres to finished_shards. Must check if the bookmark
-        # exists because if a shard has 0 records we will never set a
-        # bookmark for the shard
+        # shard_seq_numbers to finished_shards.
+        finished_shard_bookmarks.append(shard['ShardId'])
+        state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
+
         if seq_number_bookmarks.get(shard['ShardId']):
-            seq_number_bookmarks.pop(shard['ShardId'])
-            finished_shard_bookmarks.append(shard['ShardId'])
-            state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
+            seq_number_bookmarks.remove(shard['ShardId'])
             state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
-            singer.write_state(state)
+
+        singer.write_state(state)
 
     for shardId in finished_shard_bookmarks:
         if shardId not in found_shards:
@@ -206,7 +208,7 @@ def has_stream_aged_out(state, table_name):
     time_span = current_time - singer.utils.strptime_to_utc(success_timestamp)
 
     # If it has been > than 19h30m since the last successful sync of this
-    # stream then we feel confident we have not aged out
+    # stream then we consider the stream to be aged out
     return time_span > datetime.timedelta(hours=19, minutes=30)
 
 
