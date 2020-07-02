@@ -68,7 +68,7 @@ def get_shard_records(streams_client, stream_arn, shard, sequence_number):
     shard_iterator = streams_client.get_shard_iterator(**params)['ShardIterator']
 
     # This will loop indefinitely if called on open shards
-    while shard_iterator is not None:
+    while shard_iterator:
         records = streams_client.get_records(ShardIterator=shard_iterator, Limit=1000)
 
         for record in records['Records']:
@@ -105,10 +105,10 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
 
         rows_synced += 1
 
-        # Every 100 rows update bookmarks and write the state
         seq_number_bookmarks[shard['ShardId']] = record['dynamodb']['SequenceNumber']
         state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
 
+        # Every 100 rows write the state
         if rows_synced % 100 == 0:
             singer.write_state(state)
 
@@ -196,6 +196,7 @@ def has_stream_aged_out(state, table_name):
     available on a shard for 24 hours, but we only process closed shards
     and shards close after 4 hours. 24-4 = 20 and we gave 30 minutes of
     wiggle room because I don't trust AWS.
+    See https://aws.amazon.com/blogs/database/dynamodb-streams-use-cases-and-design-patterns/
     '''
     current_time = singer.utils.now()
 
