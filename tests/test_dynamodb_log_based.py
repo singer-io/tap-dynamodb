@@ -1,24 +1,11 @@
+import singer
+
+from boto3.dynamodb.types import TypeSerializer
+
 from tap_tester.scenario import (SCENARIOS)
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
-import os
-import unittest
-import string
-import random
-import time
-import re
-import pprint
-import pdb
-import paramiko
-import csv
-import json
-from datetime import datetime, timedelta, timezone
-from singer import utils, metadata
-import singer
-import decimal
-
-from boto3.dynamodb.types import TypeSerializer
 
 from base import TestDynamoDBBase
 
@@ -29,13 +16,13 @@ class DynamoDBLogBased(TestDynamoDBBase):
     def expected_table_config(self):
         return [
             {'TableName': 'com-stitchdata-test-dynamodb-integration-simple_table_1',
-            'HashKey': 'int_id',
-            'HashType': 'N',
-            'generator': self.generate_items,
-            'num_rows': 100},
+             'HashKey': 'int_id',
+             'HashType': 'N',
+             'generator': self.generate_items,
+             'num_rows': 100},
         ]
 
-    def generate_items(self, num_items, start_key = 0):
+    def generate_items(self, num_items, start_key=0):
         serializer = TypeSerializer()
         for i in range(start_key, start_key + num_items):
             record = {
@@ -45,75 +32,22 @@ class DynamoDBLogBased(TestDynamoDBBase):
             }
             yield serializer.serialize(record)
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_dynamodb_log_based"
 
     def test_run(self):
-        conn_id = connections.ensure_connection(self)
-
-        # run in check mode
-        check_job_name = runner.run_check_mode(self, conn_id)
-
-        # check exit codes
-        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
-        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
-
-        # tap discovered the right streams
-        catalog = menagerie.get_catalog(conn_id)
-
-        table_configs = self.expected_table_config()
-
-        for stream in catalog['streams']:
-            # schema is open {} for each stream
-            self.assertEqual({'type': 'object'}, stream['schema'])
-
-        expected_streams = {x['TableName'] for x in table_configs}
-        # assert we find the correct streams
-        self.assertEqual(expected_streams,
-                         {c['tap_stream_id'] for c in catalog['streams']})
-        # Verify that the table_name is in the format <collection_name> for each stream
-        self.assertEqual(expected_streams, {c['table_name'] for c in catalog['streams']})
-
-        for tap_stream_id in expected_streams:
-            found_stream = [c for c in catalog['streams'] if c['tap_stream_id'] == tap_stream_id][0]
-            stream_metadata = [x['metadata'] for x in found_stream['metadata'] if x['breadcrumb']==[]][0]
-            expected_config = [x for x in table_configs if x['TableName'] == tap_stream_id][0]
-
-            # table-key-properties metadata
-            keys = [expected_config['HashKey']]
-            if expected_config.get('SortKey'):
-                keys.append(expected_config.get('SortKey'))
-
-            self.assertEqual(set(keys),
-                             set(stream_metadata.get('table-key-properties')))
-
-            # Assert the hash key is the first key in the list
-            self.assertEqual(expected_config['HashKey'],
-                             stream_metadata.get('table-key-properties')[0])
-
-            # row-count metadata
-            self.assertEqual(expected_config['num_rows'],
-                             stream_metadata.get('row-count'))
-
-            # selected metadata is None for all streams
-            self.assertNotIn('selected', stream_metadata.keys())
-
-            # is-view metadata is False
-            self.assertFalse(stream_metadata.get('is-view'))
-
-            # no forced-replication-method metadata
-            self.assertNotIn('forced-replication-method', stream_metadata.keys())
-
+        (table_configs, conn_id, expected_streams) = self.pre_sync_test()
 
         # Select simple_coll_1 and simple_coll_2 streams and add replication method metadata
         found_catalogs = menagerie.get_catalogs(conn_id)
         for stream_catalog in found_catalogs:
             annotated_schema = menagerie.get_annotated_schema(conn_id, stream_catalog['stream_id'])
-            additional_md = [{ "breadcrumb" : [], "metadata" : {'replication-method' : 'LOG_BASED'}}]
-            selected_metadata = connections.select_catalog_and_fields_via_metadata(conn_id,
-                                                                                   stream_catalog,
-                                                                                   annotated_schema,
-                                                                                   additional_md)
+            additional_md = [{"breadcrumb" : [], "metadata" : {'replication-method' : 'LOG_BASED'}}]
+            connections.select_catalog_and_fields_via_metadata(conn_id,
+                                                               stream_catalog,
+                                                               annotated_schema,
+                                                               additional_md)
 
         # Disable streams forces shards to close
         self.disableStreams(expected_streams)
@@ -129,15 +63,15 @@ class DynamoDBLogBased(TestDynamoDBBase):
         expected_pks = {}
 
         for config in table_configs:
-            key = { config['HashKey'] }
+            key = {config['HashKey']}
             if config.get('SortKey'):
-                key |= { config.get('SortKey') }
+                key |= {config.get('SortKey')}
             expected_pks[config['TableName']] = key
 
         # assert that each of the streams that we synced are the ones that we expect to see
         record_count_by_stream = runner.examine_target_output_file(self,
                                                                    conn_id,
-                                                                   { x['TableName'] for x in table_configs },
+                                                                   {x['TableName'] for x in table_configs},
                                                                    expected_pks)
 
         state = menagerie.get_state(conn_id)
@@ -209,5 +143,6 @@ class DynamoDBLogBased(TestDynamoDBBase):
             self.assertEqual(31, len(stream['messages']))
 
         state = menagerie.get_state(conn_id)
+
 
 SCENARIOS.add(DynamoDBLogBased)

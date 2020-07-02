@@ -63,61 +63,7 @@ class DynamoDBProjections(TestDynamoDBBase):
         return "tap_tester_dynamodb_projections"
 
     def test_run(self):
-        conn_id = connections.ensure_connection(self)
-
-        # run in check mode
-        check_job_name = runner.run_check_mode(self, conn_id)
-
-        # check exit codes
-        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
-        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
-
-        # tap discovered the right streams
-        catalog = menagerie.get_catalog(conn_id)
-
-        table_configs = self.expected_table_config()
-
-        for stream in catalog['streams']:
-            # schema is open {} for each stream
-            self.assertEqual({'type': 'object'}, stream['schema'])
-
-        expected_streams = {x['TableName'] for x in table_configs}
-        # assert we find the correct streams
-        self.assertEqual(expected_streams,
-                         {c['tap_stream_id'] for c in catalog['streams']})
-        # Verify that the table_name is in the format <collection_name> for each stream
-        self.assertEqual(expected_streams, {c['table_name'] for c in catalog['streams']})
-
-        for tap_stream_id in expected_streams:
-            found_stream = [c for c in catalog['streams'] if c['tap_stream_id'] == tap_stream_id][0]
-            stream_metadata = [x['metadata'] for x in found_stream['metadata'] if x['breadcrumb'] == []][0]
-            expected_config = [x for x in table_configs if x['TableName'] == tap_stream_id][0]
-
-            # table-key-properties metadata
-            keys = [expected_config['HashKey']]
-            if expected_config.get('SortKey'):
-                keys.append(expected_config.get('SortKey'))
-
-            self.assertEqual(set(keys),
-                             set(stream_metadata.get('table-key-properties')))
-
-            # Assert the hash key is the first key in the list
-            self.assertEqual(expected_config['HashKey'],
-                             stream_metadata.get('table-key-properties')[0])
-
-            # row-count metadata
-            self.assertEqual(expected_config['num_rows'],
-                             stream_metadata.get('row-count'))
-
-            # selected metadata is None for all streams
-            self.assertNotIn('selected', stream_metadata.keys())
-
-            # is-view metadata is False
-            self.assertFalse(stream_metadata.get('is-view'))
-
-            # no forced-replication-method metadata
-            self.assertNotIn('forced-replication-method', stream_metadata.keys())
-
+        (table_configs, conn_id, expected_streams) = self.pre_sync_test()
 
         # Select simple_coll_1 and simple_coll_2 streams and add replication method metadata
         found_catalogs = menagerie.get_catalogs(conn_id)
@@ -188,5 +134,6 @@ class DynamoDBProjections(TestDynamoDBBase):
                         for list_key in config['top_level_list_keys']:
                             self.assertTrue(isinstance(message['data'][list_key], list))
                         self.assertEqual(config['nested_map_keys']['map_field'], {*message['data']['map_field'].keys()})
+
 
 SCENARIOS.add(DynamoDBProjections)
