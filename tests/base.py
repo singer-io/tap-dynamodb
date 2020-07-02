@@ -263,14 +263,4 @@ class TestDynamoDBBase(unittest.TestCase):
             # no forced-replication-method metadata
             self.assertNotIn('forced-replication-method', stream_metadata.keys())
 
-        # Select simple_coll_1 and simple_coll_2 streams and add replication method metadata
-        found_catalogs = menagerie.get_catalogs(conn_id)
-        for stream_catalog in found_catalogs:
-            annotated_schema = menagerie.get_annotated_schema(conn_id, stream_catalog['stream_id'])
-            additional_md = [{"breadcrumb" : [], "metadata" : {'replication-method' : 'LOG_BASED'}}]
-            connections.select_catalog_and_fields_via_metadata(conn_id,
-                                                               stream_catalog,
-                                                               annotated_schema,
-                                                               additional_md)
-
         return (table_configs, conn_id, expected_streams)
