@@ -75,6 +75,7 @@ class DynamoDBLogBased(TestDynamoDBBase):
                                                                    expected_pks)
 
         state = menagerie.get_state(conn_id)
+        state_version = menagerie.get_state_version(conn_id)
 
         first_versions = {}
 
@@ -97,21 +98,18 @@ class DynamoDBLogBased(TestDynamoDBBase):
             first_versions[table_name] = state['bookmarks'][table_name]['version']
             self.assertIsNotNone(first_versions[table_name])
 
-            LOGGER.info("state after first sync={}".format(state))
-
             # Write interrupted state with missing finished_shards so it
             # re-reads data from all shards
             # This should result in the next sync having same number of records
             # as the full table sync
             interrupted_state = state.copy()
             interrupted_state['bookmarks'][table_name].pop('finished_shards')
-            menagerie.set_state(conn_id, interrupted_state)
+            menagerie.set_state(conn_id, interrupted_state, version=state_version)
 
         ################################
         # Run sync again and check that shard is read again, same number of records as last time, but this time it should get it from the shard(s)
         ################################
         sync_job_name = runner.run_sync_mode(self, conn_id)
-        self.enableStreams(expected_streams)
 
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
@@ -133,6 +131,7 @@ class DynamoDBLogBased(TestDynamoDBBase):
                                                                    expected_pks)
 
         state = menagerie.get_state(conn_id)
+        state_version = menagerie.get_state_version(conn_id)
 
         first_versions = {}
 
@@ -156,7 +155,6 @@ class DynamoDBLogBased(TestDynamoDBBase):
             self.assertIsNotNone(first_versions[table_name])
             self.assertIn('shard_seq_numbers', state['bookmarks'][table_name])
 
-            LOGGER.info("state after second sync={}".format(state))
 
             # Write interrupted state one 10 sequence numbers prior to current one
             # For one shard and remove that shard from finished_shards
@@ -172,7 +170,7 @@ class DynamoDBLogBased(TestDynamoDBBase):
             # See https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_streams_StreamRecord.html#DDB-Type-streams_StreamRecord-SequenceNumber
             new_shard_last_sequence_number_string = str(new_shard_last_sequence_number).zfill(20)
             interrupted_state['bookmarks']['shard_seq_numbers'][shard_id_to_remove] = new_shard_last_sequence_number_string 
-            menagerie.set_state(conn_id, interrupted_state)
+            menagerie.set_state(conn_id, interrupted_state, version=state_version)
 
         ################################
         # Run sync again and check that expected records came through
