@@ -51,58 +51,7 @@ class DynamoDBLogBased(TestDynamoDBBase):
 
         # Disable streams forces shards to close
         self.disableStreams(expected_streams)
-        # run first full table sync
-        sync_job_name = runner.run_sync_mode(self, conn_id)
-
-        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-
-        # verify the persisted schema was correct
-        records_by_stream = runner.get_records_from_target_output()
-        expected_pks = {}
-
-        for config in table_configs:
-            key = {config['HashKey']}
-            if config.get('SortKey'):
-                key |= {config.get('SortKey')}
-            expected_pks[config['TableName']] = key
-
-        # assert that each of the streams that we synced are the ones that we expect to see
-        record_count_by_stream = runner.examine_target_output_file(self,
-                                                                   conn_id,
-                                                                   {x['TableName'] for x in table_configs},
-                                                                   expected_pks)
-
-        state = menagerie.get_state(conn_id)
-        state_version = menagerie.get_state_version(conn_id)
-
-        first_versions = {}
-
-        # assert that we get the correct number of records for each stream
-        for config in table_configs:
-            table_name = config['TableName']
-
-            self.assertEqual(config['num_rows'],
-                             record_count_by_stream[table_name])
-
-            # assert that an activate_version_message is first and last message sent for each stream
-            self.assertEqual('activate_version',
-                             records_by_stream[table_name]['messages'][0]['action'])
-            self.assertEqual('activate_version',
-                             records_by_stream[table_name]['messages'][-1]['action'])
-
-            # assert that the state has an initial_full_table_complete == True
-            self.assertTrue(state['bookmarks'][table_name]['initial_full_table_complete'])
-            # assert that there is a version bookmark in state
-            first_versions[table_name] = state['bookmarks'][table_name]['version']
-            self.assertIsNotNone(first_versions[table_name])
-
-            # Write state with missing finished_shards so it
-            # re-reads data from all shards
-            # This should result in the next sync having same number of records
-            # as the full table sync
-            state['bookmarks'][table_name].pop('finished_shards')
-            menagerie.set_state(conn_id, state, version=state_version)
+        self.first_sync_test(table_configs, conn_id)
 
         ################################
         # Run sync again and check that shard is read again, same number of records as last time, but this time it should get it from the shard(s)
@@ -199,6 +148,61 @@ class DynamoDBLogBased(TestDynamoDBBase):
         # a stream without changes
         for stream in records_by_stream.values():
             self.assertEqual(1, len(stream['messages']))
+
+    def first_sync_test(self, table_configs, conn_id):
+        # run first full table sync
+        sync_job_name = runner.run_sync_mode(self, conn_id)
+
+        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
+        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
+
+        # verify the persisted schema was correct
+        records_by_stream = runner.get_records_from_target_output()
+        expected_pks = {}
+
+        for config in table_configs:
+            key = {config['HashKey']}
+            if config.get('SortKey'):
+                key |= {config.get('SortKey')}
+            expected_pks[config['TableName']] = key
+
+        # assert that each of the streams that we synced are the ones that we expect to see
+        record_count_by_stream = runner.examine_target_output_file(self,
+                                                                   conn_id,
+                                                                   {x['TableName'] for x in table_configs},
+                                                                   expected_pks)
+
+        state = menagerie.get_state(conn_id)
+        state_version = menagerie.get_state_version(conn_id)
+
+        first_versions = {}
+
+        # assert that we get the correct number of records for each stream
+        for config in table_configs:
+            table_name = config['TableName']
+
+            self.assertEqual(config['num_rows'],
+                             record_count_by_stream[table_name])
+
+            # assert that an activate_version_message is first and last message sent for each stream
+            self.assertEqual('activate_version',
+                             records_by_stream[table_name]['messages'][0]['action'])
+            self.assertEqual('activate_version',
+                             records_by_stream[table_name]['messages'][-1]['action'])
+
+            # assert that the state has an initial_full_table_complete == True
+            self.assertTrue(state['bookmarks'][table_name]['initial_full_table_complete'])
+            # assert that there is a version bookmark in state
+            first_versions[table_name] = state['bookmarks'][table_name]['version']
+            self.assertIsNotNone(first_versions[table_name])
+
+            # Write state with missing finished_shards so it
+            # re-reads data from all shards
+            # This should result in the next sync having same number of records
+            # as the full table sync
+            state['bookmarks'][table_name].pop('finished_shards')
+            menagerie.set_state(conn_id, state, version=state_version)
+
 
 
 SCENARIOS.add(DynamoDBLogBased)
