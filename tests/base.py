@@ -23,6 +23,7 @@ LOGGER = singer.get_logger()
 
 class TestDynamoDBBase(unittest.TestCase):
     _client = None
+    _streams_client = None
 
     def expected_table_config(self):
         raise NotImplementedError
@@ -78,6 +79,14 @@ class TestDynamoDBBase(unittest.TestCase):
                                         endpoint_url='http://localhost:8000',
                                         region_name='us-east-1')
         return self._client
+
+    def dynamodb_streams_client(self):
+        if not self._streams_client:
+            self._streams_client = boto3.client('dynamodbstreams',
+                                                endpoint_url='http://localhost:8000',
+                                                region_name='us-east-1')
+
+        return self._streams_client
 
     def create_table(self, client, table_name, hash_key, hash_type, sort_key, sort_type):
         self.assertIn(table_name, ALL_TABLE_NAMES_TO_CLEAR)
@@ -206,6 +215,31 @@ class TestDynamoDBBase(unittest.TestCase):
                 client.delete_item(TableName=table['TableName'],
                                    Key={'int_id': {
                                        'N': str(i)}})
+
+    def get_shard(self, table_name, shard_id):
+        table = self.dynamodb_client().describe_table(TableName=table_name)['Table']
+        stream_arn = table['LatestStreamArn']
+
+        params = {
+            'StreamArn': stream_arn
+        }
+
+        has_more = True
+
+        while has_more:
+            stream_info = self.dynamodb_streams_client().describe_stream(**params)['StreamDescription']
+
+            for shard in stream_info['Shards']:
+                if shard['ShardId'] == shard_id:
+                    return shard
+
+            last_evaluated_shard_id = stream_info.get('LastEvaluatedShardId')
+            has_more = last_evaluated_shard_id is not None
+
+            if has_more:
+                params['ExclusiveStartShardId'] = last_evaluated_shard_id
+
+        raise ValueError('shardId {} not found in stream {} for table {}'.format(shard_id, stream_arn, table_name))
 
     def pre_sync_test(self):
         conn_id = connections.ensure_connection(self)
