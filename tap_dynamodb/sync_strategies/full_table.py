@@ -1,4 +1,3 @@
-import boto3
 import time
 
 import singer
@@ -7,6 +6,7 @@ from tap_dynamodb import dynamodb
 from tap_dynamodb.deserialize import Deserializer
 
 LOGGER = singer.get_logger()
+
 
 def scan_table(table_name, projection, last_evaluated_key, config):
     scan_params = {
@@ -35,10 +35,11 @@ def scan_table(table_name, projection, last_evaluated_key, config):
 
         has_more = result.get('LastEvaluatedKey', False)
 
-def sync_full_table(config, state, stream):
+
+def sync(config, state, stream):
     table_name = stream['tap_stream_id']
 
-    #before writing the table version to state, check if we had one to begin with
+    # before writing the table version to state, check if we had one to begin with
     first_run = singer.get_bookmark(state, table_name, 'version') is None
 
     # last run was interrupted if there is a last_id_fetched bookmark
@@ -46,7 +47,7 @@ def sync_full_table(config, state, stream):
                                           table_name,
                                           'last_evaluated_key') is not None
 
-    #pick a new table version if last run wasn't interrupted
+    # pick a new table version if last run wasn't interrupted
     if was_interrupted:
         stream_version = singer.get_bookmark(state, table_name, 'version')
     else:
@@ -63,7 +64,6 @@ def sync_full_table(config, state, stream):
     if first_run:
         singer.write_version(table_name, stream_version)
 
-
     last_evaluated_key = singer.get_bookmark(state,
                                              table_name,
                                              'last_evaluated_key')
@@ -71,7 +71,6 @@ def sync_full_table(config, state, stream):
     md_map = metadata.to_map(stream['metadata'])
     projection = metadata.get(md_map, (), 'tap-mongodb.projection')
 
-    client = dynamodb.get_client(config)
     rows_saved = 0
 
     deserializer = Deserializer()
