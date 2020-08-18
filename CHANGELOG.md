@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+  * Rework of log based sync to only sync records from closed shards
+  * Log based bookmarks now use a timestamp to determine if they are still valid
+
 ## 1.0.0
   * Releasing v1.0.0 for GA
 
