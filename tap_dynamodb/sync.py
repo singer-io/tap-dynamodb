@@ -22,7 +22,7 @@ def clear_state_on_replication_change(stream, state):
     return state
 
 def sync_stream(config, state, stream):
-    table_name = stream['tap_stream_id']
+    table_name = stream.get('table_name', stream['tap_stream_id'])
 
     md_map = metadata.to_map(stream['metadata'])
     replication_method = metadata.get(md_map, (), 'replication-method')
