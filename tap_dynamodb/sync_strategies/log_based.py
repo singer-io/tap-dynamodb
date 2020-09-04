@@ -117,7 +117,7 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
 
 
 def sync(config, state, stream):
-    table_name = stream['tap_stream_id']
+    table_name = stream.get('table_name', stream['tap_stream_id'])
 
     client = dynamodb.get_client(config)
     streams_client = dynamodb.get_stream_client(config)

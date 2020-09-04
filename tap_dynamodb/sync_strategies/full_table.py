@@ -37,7 +37,7 @@ def scan_table(table_name, projection, last_evaluated_key, config):
 
 
 def sync(config, state, stream):
-    table_name = stream['tap_stream_id']
+    table_name = stream.get('table_name', stream['tap_stream_id'])
 
     # before writing the table version to state, check if we had one to begin with
     first_run = singer.get_bookmark(state, table_name, 'version') is None
