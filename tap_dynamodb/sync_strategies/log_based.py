@@ -77,7 +77,7 @@ def get_shard_records(streams_client, stream_arn, shard, sequence_number):
         shard_iterator = records.get('NextShardIterator')
 
 
-def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projection, deserializer, table_name, stream_version, state):
+def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projection, deserializer, stream_name, stream_version, state):
     seq_number = seq_number_bookmarks.get(shard['ShardId'])
 
     rows_synced = 0
@@ -98,7 +98,7 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
                     LOGGER.fatal("Projection failed to apply: %s", projection)
                     raise RuntimeError('Projection failed to apply: {}'.format(projection))
 
-        record_message = singer.RecordMessage(stream=table_name,
+        record_message = singer.RecordMessage(stream=stream_name,
                                               record=record_message,
                                               version=stream_version)
         singer.write_message(record_message)
@@ -106,7 +106,7 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
         rows_synced += 1
 
         seq_number_bookmarks[shard['ShardId']] = record['dynamodb']['SequenceNumber']
-        state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
+        state = singer.write_bookmark(state, stream_name, 'shard_seq_numbers', seq_number_bookmarks)
 
         # Every 100 rows write the state
         if rows_synced % 100 == 0:
@@ -117,7 +117,8 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
 
 
 def sync(config, state, stream):
-    table_name = stream.get('table_name', stream['tap_stream_id'])
+    stream_name = stream['tap_stream_id']
+    table_name = stream.get('table_name', stream_name)
 
     client = dynamodb.get_client(config)
     streams_client = dynamodb.get_stream_client(config)
@@ -128,8 +129,8 @@ def sync(config, state, stream):
         projection = [x.strip().split('.') for x in projection.split(',')]
 
     # Write activate version message
-    stream_version = singer.get_bookmark(state, table_name, 'version')
-    singer.write_version(table_name, stream_version)
+    stream_version = singer.get_bookmark(state, stream_name, 'version')
+    singer.write_version(stream_name, stream_version)
 
     table = client.describe_table(TableName=table_name)['Table']
     stream_arn = table['LatestStreamArn']
@@ -137,7 +138,7 @@ def sync(config, state, stream):
     # Stores a dictionary of shardId : sequence_number for a shard. Should
     # only store sequence numbers for closed shards that have not been
     # fully synced
-    seq_number_bookmarks = singer.get_bookmark(state, table_name, 'shard_seq_numbers')
+    seq_number_bookmarks = singer.get_bookmark(state, stream_name, 'shard_seq_numbers')
     if not seq_number_bookmarks:
         seq_number_bookmarks = dict()
 
@@ -145,7 +146,7 @@ def sync(config, state, stream):
     # are removed after performing a sync and not seeing the shardId
     # returned by get_shards() because at that point the shard has been
     # killed by DynamoDB and will not be returned anymore
-    finished_shard_bookmarks = singer.get_bookmark(state, table_name, 'finished_shards')
+    finished_shard_bookmarks = singer.get_bookmark(state, stream_name, 'finished_shards')
     if not finished_shard_bookmarks:
         finished_shard_bookmarks = list()
 
@@ -163,16 +164,16 @@ def sync(config, state, stream):
         if shard['ShardId'] not in finished_shard_bookmarks:
             rows_synced += sync_shard(shard, seq_number_bookmarks,
                                       streams_client, stream_arn, projection, deserializer,
-                                      table_name, stream_version, state)
+                                      stream_name, stream_version, state)
 
         # Now that we have fully synced the shard, move it from the
         # shard_seq_numbers to finished_shards.
         finished_shard_bookmarks.append(shard['ShardId'])
-        state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
+        state = singer.write_bookmark(state, stream_name, 'finished_shards', finished_shard_bookmarks)
 
         if seq_number_bookmarks.get(shard['ShardId']):
             seq_number_bookmarks.pop(shard['ShardId'])
-            state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
+            state = singer.write_bookmark(state, stream_name, 'shard_seq_numbers', seq_number_bookmarks)
 
         singer.write_state(state)
 
@@ -180,14 +181,14 @@ def sync(config, state, stream):
         if shardId not in found_shards:
             # Remove this shard because its no longer appearing when we query for get_shards
             finished_shard_bookmarks.remove(shardId)
-            state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
+            state = singer.write_bookmark(state, stream_name, 'finished_shards', finished_shard_bookmarks)
 
     singer.write_state(state)
 
     return rows_synced
 
 
-def has_stream_aged_out(state, table_name):
+def has_stream_aged_out(state, stream_name):
     '''
     Uses the success_timestamp on the stream to determine if we have
     successfully synced the stream in the last 19 hours 30 minutes.
@@ -200,7 +201,7 @@ def has_stream_aged_out(state, table_name):
     '''
     current_time = singer.utils.now()
 
-    success_timestamp = singer.get_bookmark(state, table_name, 'success_timestamp')
+    success_timestamp = singer.get_bookmark(state, stream_name, 'success_timestamp')
 
     # If we have no success_timestamp then we have aged out
     if not success_timestamp:
@@ -213,7 +214,7 @@ def has_stream_aged_out(state, table_name):
     return time_span > datetime.timedelta(hours=19, minutes=30)
 
 
-def get_initial_bookmarks(config, state, table_name):
+def get_initial_bookmarks(config, state, stream_name, table_name):
     '''
     Returns the state including all bookmarks necessary for the initial
     full table sync
@@ -229,6 +230,6 @@ def get_initial_bookmarks(config, state, table_name):
     stream_arn = table['LatestStreamArn']
 
     finished_shard_bookmarks = [shard['ShardId'] for shard in get_shards(streams_client, stream_arn)]
-    state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
+    state = singer.write_bookmark(state, stream_name, 'finished_shards', finished_shard_bookmarks)
 
     return state
