@@ -91,7 +91,7 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
             if record_message is None:
                 LOGGER.fatal('Dynamo stream view type must be either "NEW_IMAGE" "NEW_AND_OLD_IMAGES"')
                 raise RuntimeError('Dynamo stream view type must be either "NEW_IMAGE" "NEW_AND_OLD_IMAGES"')
-            if projection is not None:
+            if projection is not None and projection != '':
                 try:
                     record_message = deserializer.apply_projection(record_message, projection)
                 except:
