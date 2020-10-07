@@ -14,7 +14,7 @@ def scan_table(table_name, projection, last_evaluated_key, config):
         'Limit': 1000
     }
 
-    if projection is not None:
+    if projection is not None and projection != '':
         scan_params['ProjectionExpression'] = projection
     if last_evaluated_key is not None:
         scan_params['ExclusiveStartKey'] = last_evaluated_key
