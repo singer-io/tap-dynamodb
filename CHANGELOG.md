@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.1
+  * Add more error checking to ensure a projection provided is also not empty [#26](https://github.com/singer-io/tap-dynamodb/pull/26)
+
 ## 1.1.0
   * Rework of log based sync to only sync records from closed shards
   * Log based bookmarks now use a timestamp to determine if they are still valid
