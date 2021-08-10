@@ -11,7 +11,13 @@ class Deserializer(TypeDeserializer):
     '''
 
     def deserialize_item(self, item):
-        return self.deserialize({'M': item})
+        '''
+        Deserializes dictionary objects otherwise checks if None and 
+        deserializes to appropriate Pythonic value - None.
+        '''
+        if item is not None:
+            return self.deserialize({'M': item})
+        return self.deserialize({'NULL': True})
 
     def _deserialize_b(self, value):
         '''
