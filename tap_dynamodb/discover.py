@@ -5,6 +5,7 @@ from tap_dynamodb import dynamodb
 
 LOGGER = singer.get_logger()
 
+
 def discover_table_schema(client, table_name):
     try:
         table_info = client.describe_table(TableName=table_name).get('Table', {})
@@ -19,15 +20,35 @@ def discover_table_schema(client, table_name):
     if table_info.get('ItemCount'):
         mdata = metadata.write(mdata, (), 'row-count', table_info['ItemCount'])
 
-    return {
+    schema = {
         'table_name': table_name,
         'stream': table_name,
         'tap_stream_id': table_name,
         'metadata': metadata.to_list(mdata),
         'schema': {
-            'type': 'object'
+            'type': 'object',
         }
     }
+    scan_result = client.scan(TableName=table_name, Limit=1)
+    if scan_result['Count'] > 0:
+        single_record = scan_result['Items'][0]
+        schema_properties = get_schema_properties_from_record(single_record)
+        schema['schema']['properties'] = schema_properties
+    return schema
+
+
+def get_schema_properties_from_record(record):
+    properties = {}
+    for key in record.keys():
+        properties[key] = {
+            "type": [
+                "null",
+                # TODO(Samin): For now, all data are taken as strings, need to modify it later to include other
+                #  data-types
+                "string"
+            ]
+        }
+    return properties
 
 
 def discover_streams(config):
@@ -36,7 +57,8 @@ def discover_streams(config):
     try:
         response = client.list_tables()
     except ClientError:
-        raise Exception("Authorization to AWS failed. Please ensure the role and policy are configured correctly on your AWS account.")
+        raise Exception(
+            "Authorization to AWS failed. Please ensure the role and policy are configured correctly on your AWS account.")
 
     table_list = response.get('TableNames')
 
@@ -47,6 +69,5 @@ def discover_streams(config):
     streams = [x for x in
                (discover_table_schema(client, table) for table in table_list)
                if x is not None]
-
 
     return streams
