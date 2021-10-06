@@ -104,3 +104,5 @@ ENV/
 .tramp_history
 
 config.json
+
+.idea/
