@@ -1,5 +1,13 @@
 import base64
+import decimal
 from boto3.dynamodb.types import TypeDeserializer
+
+# Custom context to control how decimals are deserialized
+# Precision = 100 because that's the max for `singer.decimal` elsewhere, still
+# trapping Rounding errors because that is a true error.
+trapped_signals = [decimal.Clamped, decimal.Overflow, decimal.Inexact, decimal.Rounded, decimal.Underflow]
+SINGER_CONTEXT = decimal.Context(Emin=-128, Emax=126, prec=100,
+                                 traps=trapped_signals)
 
 class Deserializer(TypeDeserializer):
     '''
@@ -19,6 +27,12 @@ class Deserializer(TypeDeserializer):
         the aws cli returns binary data
         '''
         return base64.b64encode(value).decode('utf-8')
+
+    def _deserialize_n(self, value):
+        '''
+        Deserializes sets as lists to allow JSON encoding
+        '''
+        return SINGER_CONTEXT.create_decimal(value)
 
     def _deserialize_ns(self, value):
         '''
