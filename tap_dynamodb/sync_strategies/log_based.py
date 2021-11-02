@@ -139,7 +139,7 @@ def sync(config, state, stream):
     # fully synced
     seq_number_bookmarks = singer.get_bookmark(state, table_name, 'shard_seq_numbers')
     if not seq_number_bookmarks:
-        seq_number_bookmarks = dict()
+        seq_number_bookmarks = {}
 
     # Get the list of closed shards which we have fully synced. These
     # are removed after performing a sync and not seeing the shardId
@@ -147,7 +147,7 @@ def sync(config, state, stream):
     # killed by DynamoDB and will not be returned anymore
     finished_shard_bookmarks = singer.get_bookmark(state, table_name, 'finished_shards')
     if not finished_shard_bookmarks:
-        finished_shard_bookmarks = list()
+        finished_shard_bookmarks = []
 
     # The list of shardIds we found this sync. Is used to determine which
     # finished_shard_bookmarks to kill
