@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.2
+  * Fix issue where decimals can throw a Rounded signal if they are too wide [#33](https://github.com/singer-io/tap-dynamodb/pull/33)
+
 ## 1.1.1
   * Add more error checking to ensure a projection provided is also not empty [#26](https://github.com/singer-io/tap-dynamodb/pull/26)
 
