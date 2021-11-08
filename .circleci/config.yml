@@ -23,7 +23,7 @@ jobs:
       - run:
           name: 'Unit Tests'
           command: |
-            source /usr/local/share/virtualenvs/tap-mixpanel/bin/activate
+            source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
             python -m pytest --junitxml=junit/test-result.xml --cov=tap_dynamodb --cov-report=html tests/unittests/
       - store_test_results:
           path: test_output/report.xml
