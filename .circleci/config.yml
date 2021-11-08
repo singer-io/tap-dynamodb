@@ -14,11 +14,21 @@ jobs:
             virtualenv -p python3 /usr/local/share/virtualenvs/tap-dynamodb
             source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
             pip install .[dev]
+            pip install pytest-cov
       - run:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
             make lint
+      - run:
+          name: 'Unit Tests'
+          command: |
+            source /usr/local/share/virtualenvs/tap-mixpanel/bin/activate
+            python -m pytest --junitxml=junit/test-result.xml --cov=tap_mixpanel --cov-report=html tests/unittests/
+      - store_test_results:
+          path: test_output/report.xml
+      - store_artifacts:
+          path: htmlcov
       - run:
           name: 'Tap Tester'
           command: |

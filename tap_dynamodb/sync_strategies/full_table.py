@@ -8,7 +8,7 @@ from tap_dynamodb.deserialize import Deserializer
 LOGGER = singer.get_logger()
 
 
-def scan_table(table_name, projection, last_evaluated_key, config):
+def scan_table(table_name, projection, expression, last_evaluated_key, config):
     scan_params = {
         'TableName': table_name,
         'Limit': 1000
@@ -16,6 +16,9 @@ def scan_table(table_name, projection, last_evaluated_key, config):
 
     if projection is not None and projection != '':
         scan_params['ProjectionExpression'] = projection
+    if expression:
+        # Add `ExpressionAttributeNames` parameter for reserved word.
+        scan_params['ExpressionAttributeNames'] = expression
     if last_evaluated_key is not None:
         scan_params['ExclusiveStartKey'] = last_evaluated_key
 
@@ -71,10 +74,21 @@ def sync(config, state, stream):
     md_map = metadata.to_map(stream['metadata'])
     projection = metadata.get(md_map, (), 'tap-mongodb.projection')
 
+    # An expression attribute name is a placeholder that one use in an Amazon DynamoDB expression as an alternative to an actual attribute name.
+    # Sometimes it might need to write an expression containing an attribute name that conflicts with a DynamoDB reserved word.
+    # For example, table `A` contain field `Comment` but `Comment` is reserved word. so, it fail during fetch.
+    expression = metadata.get(md_map, (), 'tap-mongodb.expression')
+    if projection is not None:
+        # Split projection string(fields than need to be fetched) to list
+        projections = [x.strip() for x in projection.split(',')]
+        if expression is not None:
+            # Split expression string(reserved words) to list
+            expressions = [x.strip() for x in expression.split(',')]
+            projection, expression = prepare_expression(projections, expressions) # Prepare expression attributes for reserved word.
     rows_saved = 0
 
     deserializer = Deserializer()
-    for result in scan_table(table_name, projection, last_evaluated_key, config):
+    for result in scan_table(table_name, projection, expression, last_evaluated_key, config): # Pass extra expressions attribute for reserved word.
         for item in result.get('Items', []):
             rows_saved += 1
             # TODO: Do we actually have to put the item we retreive from
@@ -101,3 +115,27 @@ def sync(config, state, stream):
     singer.write_version(table_name, stream_version)
 
     return rows_saved
+
+def prepare_expression(projections, expressions):
+    """
+    Prepare expression attributes for reserved word. Loop through all projection.
+    If projection found in expressions(reserved word list) then prepare expression attribute name for the same with
+    starting of # sign followed by the combination of 3 characters of projection(1st 2 character and last character).
+    Because as per the documentation an expression attribute name must begin with a pound sign (#), and be followed
+    by one or more alphanumeric characters.Prepare expression Dict element with key as expression attribute name and
+    value as projection and replace projection with expression attribute name in projections(list of fields than need
+    to be fetched). Return expression dict and comma seprated string of projections.
+    Example :
+    projections = ["Comment", "Ticket"], expressions = ["Comment"]
+    return = "#Cot, Ticket", {"#Cot" : "Comment"}
+    """
+    i = 0
+    expression_list = {}
+    for projection_element in projections: # Loop through all projection.
+        if projection_element in expressions: # Projection found in expressions(reserved word list)
+            expr = "#{}".format(projection_element[:2]+projection_element[-1:]) # prepare expression attribute name
+            expression_list[expr] = projection_element # Dict element with key as expression attribute name and value as projection
+            projections[i] = expr # Replace projection with expression attribute name in projections
+        i = i + 1
+
+    return ','.join(projections), expression_list
