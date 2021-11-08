@@ -4,16 +4,16 @@ import singer
 from boto3.dynamodb.types import TypeSerializer
 
 from tap_tester.scenario import (SCENARIOS)
-import tap_tester.connections as connections
-import tap_tester.menagerie   as menagerie
-import tap_tester.runner      as runner
+from tap_tester import connections
+from tap_tester import menagerie
+from tap_tester import runner
 from base import TestDynamoDBBase
 
 LOGGER = singer.get_logger()
 
 
 class DynamoDBProjectionsExpressions(TestDynamoDBBase):
-    """Test that tap does not break while table having reserve word as field. Here table has reserve word `Comment`. Earlier if 
+    """Test that tap does not break while table having reserve word as field. Here table has reserve word `Comment`. Earlier if
     we pass reserve word in projection it throwing error"""
     def expected_table_config(self):
         return [
