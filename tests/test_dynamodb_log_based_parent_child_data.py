@@ -1,8 +1,8 @@
 from boto3.dynamodb.types import TypeSerializer
 
-import tap_tester.connections as connections
-import tap_tester.menagerie as menagerie
-import tap_tester.runner as runner
+from tap_tester import connections
+from tap_tester import menagerie
+from tap_tester import runner
 
 from base import TestDynamoDBBase
 
@@ -32,6 +32,7 @@ class DynamoDBLogBasedParentChildData(TestDynamoDBBase):
         for i in range(start_key, start_key + num_items):
             record = {
                 'int_id': i,
+                'string_field': self.random_string_generator(),
                 'test_list_2': ['list_2_data']
             }
             yield serializer.serialize(record)
