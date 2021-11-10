@@ -14,6 +14,9 @@ from botocore.session import Session
 LOGGER = singer.get_logger()
 
 def retry_pattern():
+    '''
+    Retry logic for the ClientError
+    '''
     return backoff.on_exception(backoff.expo,
                                 ClientError,
                                 max_tries=5,
@@ -22,6 +25,9 @@ def retry_pattern():
 
 
 def log_backoff_attempt(details):
+    '''
+    Log the retry attempt with the number of tries
+    '''
     LOGGER.info("Error detected communicating with Amazon, triggering backoff: %d try", details.get("tries"))
 
 
@@ -40,6 +46,9 @@ class AssumeRoleProvider():
 
 @retry_pattern()
 def setup_aws_client(config):
+    """
+    Setup the aws session for making the API calls
+    """
     role_arn = "arn:aws:iam::{}:role/{}".format(config['account_id'].replace('-', ''),
                                                 config['role_name'])
 
@@ -66,6 +75,9 @@ def setup_aws_client(config):
     boto3.setup_default_session(botocore_session=refreshable_session)
 
 def get_client(config):
+    """
+    client for FULL_TABLE and running discover mode
+    """
     if config.get('use_local_dynamo'):
         return boto3.client('dynamodb',
                             endpoint_url='http://localhost:8000',
@@ -73,6 +85,9 @@ def get_client(config):
     return boto3.client('dynamodb', config['region_name'])
 
 def get_stream_client(config):
+    """
+    Streams client for the LOG_BASED sync
+    """
     if config.get('use_local_dynamo'):
         return boto3.client('dynamodbstreams',
                             endpoint_url='http://localhost:8000',
