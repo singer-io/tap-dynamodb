@@ -120,7 +120,7 @@ def prepare_expression(projections, expressions):
     """
     Prepare expression attributes for reserved word. Loop through all projection.
     If projection found in expressions(reserved word list) then prepare expression attribute name for the same with
-    starting of # sign followed by the combination of 1st half part of projection and last character of projection.
+    starting of # sign followed by the combination of 1st half part of projection, next character of 1st half and last 2 character of projection.
     Because as per the documentation an expression attribute name must begin with a pound sign (#), and be followed
     by one or more alphanumeric characters.Prepare expression Dict element with key as expression attribute name and
     value as projection and replace projection with expression attribute name in projections(list of fields than need
@@ -128,14 +128,14 @@ def prepare_expression(projections, expressions):
     Example :
     projections =
     ["Comment", "Ticket"], expressions = ["Comment"]
-    return = "#Comt, Ticket", {"#Comt" : "Comment"}
+    return = "#Commnt, Ticket", {"#Commnt" : "Comment"}
     """
     i = 0
     expression_list = {}
     for projection_element in projections: # Loop through all projection.
         if projection_element in expressions: # Projection found in expressions(reserved word list)
             half_length = int(len(projection_element)/2)
-            expr = "#{}".format(projection_element[:half_length]+projection_element[-1:]) # prepare expression attribute name
+            expr = "#{}".format(projection_element[:half_length+1]+projection_element[-2:]) # prepare expression attribute name
             expression_list[expr] = projection_element # Dict element with key as expression attribute name and value as projection
             projections[i] = expr # Replace projection with expression attribute name in projections
         i = i + 1
