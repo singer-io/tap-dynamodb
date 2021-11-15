@@ -34,7 +34,7 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         res = sync(CONFIG, STATE, STREAM)
 
         # Verify that `scan_table` called with expected paramater including expression attributes
-        mock_scan_table.assert_called_with('GoogleDocs', '#Comt,Sheet', {'#Comt': 'Comment'}, {}, {'start_date': '2017-01-01', 
+        mock_scan_table.assert_called_with('GoogleDocs', '#Commnt,Sheet', {'#Commnt': 'Comment'}, {}, {'start_date': '2017-01-01', 
         'account_id': 'dummy_account_id', 'role_name': 'dummy_role', 'external_id': 'dummy_external_id', 'region_name': 'dummy_region_name'})
 
 
@@ -43,9 +43,9 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         """Test that scan method called with extra `ExpressionAttributeNames` parameter for single reserve word. 
         Here we mocked get_client with return value as object of MockClient class. Mcked scan method to return arguments 
         which we passed."""
-        res = list(scan_table('', '#Comt,Sheet', {'#Comt': 'Comment'}, {}, {}))
-        self.assertEqual(res, [{'ExclusiveStartKey': {},'ExpressionAttributeNames': {'#Comt': 'Comment'},'Limit': 1000,
-                                'ProjectionExpression': '#Comt,Sheet','TableName': ''}])
+        res = list(scan_table('', '#Commnt,Sheet', {'#Commnt': 'Comment'}, {}, {}))
+        self.assertEqual(res, [{'ExclusiveStartKey': {},'ExpressionAttributeNames': {'#Commnt': 'Comment'},'Limit': 1000,
+                                'ProjectionExpression': '#Commnt,Sheet','TableName': ''}])
 
     @patch('singer.metadata.get', side_effect = ["Comment, Sheet", "Comment, Sheet"])
     @patch('tap_dynamodb.sync_strategies.full_table.scan_table', return_value = {}) 
@@ -54,7 +54,7 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         res = sync(CONFIG, STATE, STREAM)
 
         # Verify that `scan_table` called with expected paramater including multiple expression attributes
-        mock_scan_table.assert_called_with('GoogleDocs', '#Comt,#Sht', {'#Comt': 'Comment', '#Sht': 'Sheet'}, {}, {'start_date': '2017-01-01', 
+        mock_scan_table.assert_called_with('GoogleDocs', '#Commnt,#Sheet', {'#Commnt': 'Comment', '#Sheet': 'Sheet'}, {}, {'start_date': '2017-01-01', 
         'account_id': 'dummy_account_id', 'role_name': 'dummy_role', 'external_id': 'dummy_external_id', 'region_name': 'dummy_region_name'})
 
 
@@ -63,9 +63,9 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         """Test that scan method called with extra `ExpressionAttributeNames` parameter for multiple reserve word. 
         Here we mocked get_client with return value as object of MockClient class. Mcked scan method to return arguments 
         which we passed."""
-        res = list(scan_table('', '#Comt,#Sht', {'#Comt': 'Comment', '#Sht': 'Sheet'}, {}, {}))
-        self.assertEqual(res, [{'ExclusiveStartKey': {},'ExpressionAttributeNames': {'#Comt': 'Comment', '#Sht': 'Sheet'},
-                                'Limit': 1000, 'ProjectionExpression': '#Comt,#Sht','TableName': ''}])
+        res = list(scan_table('', '#Commnt,#Sheet', {'#Commnt': 'Comment', '#Sheet': 'Sheet'}, {}, {}))
+        self.assertEqual(res, [{'ExclusiveStartKey': {},'ExpressionAttributeNames': {'#Commnt': 'Comment', '#Sheet': 'Sheet'},
+                                'Limit': 1000, 'ProjectionExpression': '#Commnt,#Sheet','TableName': ''}])
         
     @patch('singer.metadata.get', side_effect = ["Comment, Sheet", ""])
     @patch('tap_dynamodb.sync_strategies.full_table.scan_table', return_value = {}) 
