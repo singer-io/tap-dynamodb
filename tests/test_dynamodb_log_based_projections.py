@@ -22,8 +22,9 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
                 'HashType': 'N',
                 'generator': self.generate_items,
                 'num_rows': 100,
-                'ProjectionExpression': 'int_id, string_field, decimal_field, int_list_field[1], map_field.map_entry_1, string_list[2], map_field.list_entry[2], list_map[1].a',
-                'top_level_keys': {'int_id', 'string_field', 'decimal_field', 'int_list_field', 'map_field', 'string_list', 'list_map'},
+                # Added two extra reserve word field `Absolute`, `Comment` to verify expression attributes
+                'ProjectionExpression': 'Absolute, Comment, int_id, string_field, decimal_field, int_list_field[1], map_field.map_entry_1, string_list[2], map_field.list_entry[2], list_map[1].a',
+                'top_level_keys': {'Absolute', 'Comment', 'int_id', 'string_field', 'decimal_field', 'int_list_field', 'map_field', 'string_list', 'list_map'},
                 'top_level_list_keys': {'int_list_field', 'string_list', 'list_map'},
                 'nested_map_keys': {'map_field': {'map_entry_1', 'list_entry'}},
             }
@@ -33,6 +34,8 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
         serializer = TypeSerializer()
         for i in range(start_key, start_key + num_items):
             record = {
+                'Comment': 'Talend stitch',
+                'Absolute': 'true',
                 'int_id': i,
                 'decimal_field': decimal.Decimal(str(i) + '.00000000001'),
                 'string_field': self.random_string_generator(),
@@ -73,6 +76,7 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
                     "breadcrumb": [],
                     "metadata": {
                         'replication-method': 'LOG_BASED',
+                        'tap-mongodb.expression': 'Comment, Absolute', # `expression` field for reserve word.
                         'tap-mongodb.projection': table_configs[0]['ProjectionExpression']
                     }
                 }
