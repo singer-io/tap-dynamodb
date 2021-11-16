@@ -2,10 +2,10 @@ import time
 
 import singer
 from singer import metadata
-from tap_dynamodb import dynamodb
 from tap_dynamodb.deserialize import Deserializer
 import backoff
-from botocore.exceptions import ClientError, ConnectTimeoutError, ReadTimeoutError
+from botocore.exceptions import ConnectTimeoutError, ReadTimeoutError
+from tap_dynamodb import dynamodb
 
 LOGGER = singer.get_logger()
 
