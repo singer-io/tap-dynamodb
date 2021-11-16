@@ -2,6 +2,8 @@ from singer import metadata
 import singer
 from botocore.exceptions import ClientError
 from tap_dynamodb import dynamodb
+import backoff
+from botocore.exceptions import ClientError, ConnectTimeoutError, ReadTimeoutError
 
 LOGGER = singer.get_logger()
 
@@ -29,7 +31,11 @@ def discover_table_schema(client, table_name):
         }
     }
 
-
+# Backoff for both ReadTimeout and ConnectTimeout error for 5 times
+@backoff.on_exception(backoff.expo,
+                    (ReadTimeoutError, ConnectTimeoutError),
+                    max_tries=5,
+                    factor=2)
 def discover_streams(config):
     client = dynamodb.get_client(config)
 

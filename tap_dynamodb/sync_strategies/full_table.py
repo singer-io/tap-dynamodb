@@ -4,10 +4,15 @@ import singer
 from singer import metadata
 from tap_dynamodb import dynamodb
 from tap_dynamodb.deserialize import Deserializer
+import backoff
+from botocore.exceptions import ClientError, ConnectTimeoutError, ReadTimeoutError
 
 LOGGER = singer.get_logger()
 
-
+@backoff.on_exception(backoff.expo,
+                          (ReadTimeoutError, ConnectTimeoutError),
+                          max_tries=5,
+                          factor=2)
 def scan_table(table_name, projection, last_evaluated_key, config):
     scan_params = {
         'TableName': table_name,
