@@ -18,7 +18,7 @@ jobs:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
-            pylint tap_dynamodb --disable 'duplicate-code,missing-module-docstring,line-too-long,fixme,missing-function-docstring,raise-missing-from,consider-using-f-string,too-many-locals,invalid-name'
+            pylint tap_dynamodb --disable 'duplicate-code,missing-module-docstring,missing-class-docstring,too-few-public-methods,line-too-long,fixme,missing-function-docstring,raise-missing-from,consider-using-f-string,too-many-locals,invalid-name,too-many-arguments'
       - run:
           name: 'Unit Tests'
           command: |
