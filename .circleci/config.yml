@@ -18,7 +18,7 @@ jobs:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
-            make lint
+            pylint tap_dynamodb --disable 'duplicate-code'
       - run:
           name: 'Unit Tests'
           command: |
