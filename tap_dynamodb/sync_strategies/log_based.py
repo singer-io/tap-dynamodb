@@ -1,10 +1,9 @@
 import datetime
 from singer import metadata
 import singer
-from tap_dynamodb import deserialize
 import backoff
 from botocore.exceptions import ConnectTimeoutError, ReadTimeoutError
-from tap_dynamodb import dynamodb
+from tap_dynamodb import dynamodb, deserialize
 
 LOGGER = singer.get_logger()
 WRITE_STATE_PERIOD = 1000
