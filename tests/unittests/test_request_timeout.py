@@ -1,5 +1,5 @@
 from tap_dynamodb.sync_strategies import full_table, log_based
-from tap_dynamodb import discover, dynamodb
+from tap_dynamodb import LOGGER, discover, dynamodb
 import tap_dynamodb
 import unittest
 from unittest import mock
@@ -8,34 +8,100 @@ from unittest.case import TestCase
 from botocore.exceptions import ClientError, ConnectTimeoutError, ReadTimeoutError
 
 class MockClient():
-    def __init__(self, endpoint_url=None):
-        pass
+    def __init__(self,endpoint_url=None):
+        self.endpoint_url="abc.com"
 
-    def list_tables(self):
-        pass
+    def list_tables(self, *args):
+        raise ReadTimeoutError(endpoint_url="abc.com")
 
+    def scan(self, **args):
+        raise ReadTimeoutError(endpoint_url="abc.com")
 
+    def describe_table(self, **args):
+        raise ReadTimeoutError(endpoint_url="abc.com")
+
+def mock_get_client(*args):
+    return MockClient()
+class MockClientConnectTimeout():
+    def __init__(self,endpoint_url=None):
+        self.endpoint_url="abc.com"
+
+    def list_tables(self, *args):
+        raise ConnectTimeoutError(endpoint_url="abc.com")
+
+    def scan(self, **args):
+        raise ConnectTimeoutError(endpoint_url="abc.com")
+
+    def describe_table(self, **args):
+        raise ConnectTimeoutError(endpoint_url="abc.com")
+
+def mock_get_client(*args):
+    return MockClient()
+
+def mock_get_client_connect_timeout(*args):
+    return MockClientConnectTimeout()
 
 class TestBackoffError(unittest.TestCase):
     '''
     Test that backoff logic works properly.
     '''
-    # @mock.patch('tap_dynamodb.dynamodb.boto3.client', return_value=MockClient())
-    @mock.patch('boto3.client')
-    @mock.patch('singer.metadata.to_map')
-    def test_discover_stream_request_timeout_and_backoff(self, mock_map, mock_client):
+    @mock.patch('tap_dynamodb.dynamodb.get_client',side_effect=mock_get_client)
+    def test_discover_stream_read_timeout_and_backoff(self, mock_client):
         """
-        Check whether the request backoffs properly for list_tables for 5 times in case of Timeout error.
+        Check whether the request backoffs properly for discover_streams for 5 times in case of ReadTimeoutError error.
         """
-        mock_client.list_tables.side_effect = ReadTimeoutError
-        # mock_client = Mock()
-        # mock_client.list_tables = Mock()
-
         with self.assertRaises(ReadTimeoutError):
-            # log_based.sync({"region_name": "us-east-2"}, {}, {"tap_stream_id": "dummy", "metadata":""})
             discover.discover_streams({"region_name": "dummy", "use_local_dynamo": "true"})
-        self.assertEquals(mock_client.list_tables.call_count, 5)
+        self.assertEquals(mock_client.call_count, 5)
 
+    @mock.patch('tap_dynamodb.dynamodb.get_client',side_effect=mock_get_client)
+    def test_scan_table_sync_read_timeout_and_backoff(self, mock_client):
+        """
+        Check whether the request backoffs properly for full_table sync for 5 times in case of ReadTimeoutError error.
+        """
+        with self.assertRaises(ReadTimeoutError):
+            full_table.sync({"region_name": "dummy", "use_local_dynamo": "true"}, {}, {"tap_stream_id":"dummy_stream", "metadata": ""})
+        self.assertEqual(mock_client.call_count, 5)
+    
+    @mock.patch('tap_dynamodb.dynamodb.get_client',side_effect=mock_get_client)
+    @mock.patch('tap_dynamodb.dynamodb.get_stream_client',side_effect=mock_get_client)
+    def test_get_records_sync_read_timeout_and_backoff(self, mock_stream_client, mock_client):
+        """
+        Check whether the request backoffs properly for log_based sync for 5 times in case of ReadTimeoutError error.
+        """
+        with self.assertRaises(ReadTimeoutError):
+            log_based.sync({"region_name": "dummy", "use_local_dynamo": "true"}, {}, {"tap_stream_id":"dummy_stream", "metadata": ""})
+        self.assertEqual(mock_client.call_count, 5)
+        self.assertEqual(mock_stream_client.call_count, 5)
+
+    @mock.patch('tap_dynamodb.dynamodb.get_client',side_effect=mock_get_client_connect_timeout)
+    def test_discover_stream_connect_timeout_and_backoff(self, mock_client):
+        """
+        Check whether the request backoffs properly for discover_streams for 5 times in case of ConnectTimeoutError error.
+        """
+        with self.assertRaises(ConnectTimeoutError):
+            discover.discover_streams({"region_name": "dummy", "use_local_dynamo": "true"})
+        self.assertEquals(mock_client.call_count, 5)
+
+    @mock.patch('tap_dynamodb.dynamodb.get_client',side_effect=mock_get_client_connect_timeout)
+    def test_scan_table_sync_connect_timeout_and_backoff(self, mock_client):
+        """
+        Check whether the request backoffs properly for full_table sync for 5 times in case of ConnectTimeoutError error.
+        """
+        with self.assertRaises(ConnectTimeoutError):
+            full_table.sync({"region_name": "dummy", "use_local_dynamo": "true"}, {}, {"tap_stream_id":"dummy_stream", "metadata": ""})
+        self.assertEqual(mock_client.call_count, 5)
+    
+    @mock.patch('tap_dynamodb.dynamodb.get_client',side_effect=mock_get_client_connect_timeout)
+    @mock.patch('tap_dynamodb.dynamodb.get_stream_client',side_effect=mock_get_client_connect_timeout)
+    def test_get_records_sync_connect_timeout_and_backoff(self, mock_stream_client, mock_client):
+        """
+        Check whether the request backoffs properly for log_based sync for 5 times in case of ConnectTimeoutError error.
+        """
+        with self.assertRaises(ConnectTimeoutError):
+            log_based.sync({"region_name": "dummy", "use_local_dynamo": "true"}, {}, {"tap_stream_id":"dummy_stream", "metadata": ""})
+        self.assertEqual(mock_client.call_count, 5)
+        self.assertEqual(mock_stream_client.call_count, 5)
 
 class TestRequestTimeoutValue(unittest.TestCase):
     '''

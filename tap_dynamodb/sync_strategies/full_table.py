@@ -9,10 +9,7 @@ from botocore.exceptions import ClientError, ConnectTimeoutError, ReadTimeoutErr
 
 LOGGER = singer.get_logger()
 
-@backoff.on_exception(backoff.expo,
-                          (ReadTimeoutError, ConnectTimeoutError),
-                          max_tries=5,
-                          factor=2)
+
 def scan_table(table_name, projection, last_evaluated_key, config):
     scan_params = {
         'TableName': table_name,
@@ -40,7 +37,11 @@ def scan_table(table_name, projection, last_evaluated_key, config):
 
         has_more = result.get('LastEvaluatedKey', False)
 
-
+# Backoff for both ReadTimeout and ConnectTimeout error for 5 times
+@backoff.on_exception(backoff.expo,
+                          (ReadTimeoutError, ConnectTimeoutError),
+                          max_tries=5,
+                          factor=2)
 def sync(config, state, stream):
     table_name = stream['tap_stream_id']
 

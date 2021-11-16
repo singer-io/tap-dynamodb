@@ -74,15 +74,16 @@ def get_client(config):
         request_timeout = float(request_timeout)
     else: # If value is 0,"0" or "" then set default to 300 seconds.
         request_timeout = REQUEST_TIMEOUT
-    timeout_config = Config(connect_timeout=request_timeout,  read_timeout=request_timeout)
+    # add the request_timeout in both connect_timeout as well as read_timeout
+    timeout_config = Config(connect_timeout=request_timeout, read_timeout=request_timeout)
     if config.get('use_local_dynamo'):
         return boto3.client('dynamodb',
                             endpoint_url='http://localhost:8000',
                             region_name=config['region_name'],
-                            config=timeout_config
+                            config=timeout_config   # pass the config to add the request_timeout
                             )
     return boto3.client('dynamodb', config['region_name'],
-                        config=timeout_config
+                        config=timeout_config   # pass the config to add the request_timeout
                         )
 
 def get_stream_client(config):
@@ -92,14 +93,15 @@ def get_stream_client(config):
         request_timeout = float(request_timeout)
     else: # If value is 0,"0" or "" then set default to 300 seconds.
         request_timeout = REQUEST_TIMEOUT
+    # add the request_timeout in both connect_timeout as well as read_timeout
     timeout_config = Config(connect_timeout=request_timeout,  read_timeout=request_timeout)
     if config.get('use_local_dynamo'):
         return boto3.client('dynamodbstreams',
                             endpoint_url='http://localhost:8000',
                             region_name=config['region_name'],
-                            config=timeout_config
+                            config=timeout_config   # pass the config to add the request_timeout
                             )
     return boto3.client('dynamodbstreams',
                         region_name=config['region_name'],
-                        config=timeout_config
+                        config=timeout_config   # pass the config to add the request_timeout
                         )
