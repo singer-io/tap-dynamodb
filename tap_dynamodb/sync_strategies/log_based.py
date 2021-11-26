@@ -117,9 +117,9 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
 
 # Backoff for both ReadTimeout and ConnectTimeout error for 5 times
 @backoff.on_exception(backoff.expo,
-                          (ReadTimeoutError, ConnectTimeoutError),
-                          max_tries=5,
-                          factor=2)
+                      (ReadTimeoutError, ConnectTimeoutError),
+                      max_tries=5,
+                      factor=2)
 def sync(config, state, stream):
     table_name = stream['tap_stream_id']
 

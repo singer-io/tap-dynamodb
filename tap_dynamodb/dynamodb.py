@@ -67,13 +67,18 @@ def setup_aws_client(config):
     LOGGER.info("Attempting to assume_role on RoleArn: %s", role_arn)
     boto3.setup_default_session(botocore_session=refreshable_session)
 
-def get_client(config):
+def get_request_timeout(config):
     # if request_timeout is other than 0,"0" or "" then use request_timeout
     request_timeout = config.get('request_timeout')
     if request_timeout and float(request_timeout):
         request_timeout = float(request_timeout)
     else: # If value is 0,"0" or "" then set default to 300 seconds.
         request_timeout = REQUEST_TIMEOUT
+    return request_timeout
+
+def get_client(config):
+    # get the request_timeout
+    request_timeout = get_request_timeout(config)
     # add the request_timeout in both connect_timeout as well as read_timeout
     timeout_config = Config(connect_timeout=request_timeout, read_timeout=request_timeout)
     if config.get('use_local_dynamo'):
@@ -87,12 +92,8 @@ def get_client(config):
                         )
 
 def get_stream_client(config):
-    # if request_timeout is other than 0,"0" or "" then use request_timeout
-    request_timeout = config.get('request_timeout')
-    if request_timeout and float(request_timeout):
-        request_timeout = float(request_timeout)
-    else: # If value is 0,"0" or "" then set default to 300 seconds.
-        request_timeout = REQUEST_TIMEOUT
+    # get the request_timeout
+    request_timeout = get_request_timeout(config)
     # add the request_timeout in both connect_timeout as well as read_timeout
     timeout_config = Config(connect_timeout=request_timeout,  read_timeout=request_timeout)
     if config.get('use_local_dynamo'):
