@@ -103,6 +103,15 @@ class TestBackoffError(unittest.TestCase):
         self.assertEqual(mock_client.call_count, 5)
         self.assertEqual(mock_stream_client.call_count, 5)
 
+    @mock.patch('tap_dynamodb.dynamodb.get_client',side_effect=mock_get_client)
+    def test_get_initial_bookmarks_read_timeout_and_backoff(self, mock_client):
+        """
+        Check whether the request backoffs properly for discover_streams for 5 times in case of ReadTimeoutError error.
+        """
+        with self.assertRaises(ReadTimeoutError):
+            log_based.get_initial_bookmarks({"region_name": "dummy", "use_local_dynamo": "true"}, {}, "dummy_table")
+        self.assertEquals(mock_client.call_count, 5)
+
 class TestRequestTimeoutValue(unittest.TestCase):
     '''
     Test that request timeout parameter works properly in various cases

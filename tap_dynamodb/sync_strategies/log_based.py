@@ -216,10 +216,11 @@ def has_stream_aged_out(state, table_name):
     # stream then we consider the stream to be aged out
     return time_span > datetime.timedelta(hours=19, minutes=30)
 
+# Backoff for both ReadTimeout and ConnectTimeout error for 5 times
 @backoff.on_exception(backoff.expo,
-                          (ReadTimeoutError, ConnectTimeoutError),
-                          max_tries=5,
-                          factor=2)
+                      (ReadTimeoutError, ConnectTimeoutError),
+                      max_tries=5,
+                      factor=2)
 def get_initial_bookmarks(config, state, table_name):
     '''
     Returns the state including all bookmarks necessary for the initial
