@@ -72,7 +72,7 @@ class Deserializer(TypeDeserializer):
             if '[' in breadcrumb[0]:
                 breadcrumb_key = breadcrumb[0].split('[')[0]
                 index = int(breadcrumb[0].split('[')[1].split(']')[0])
-                if output.get(breadcrumb_key) is None:
+                if not output.get(breadcrumb_key):
                     output[breadcrumb_key] = [{}]
                 # only prepare output if the list field contains data at that index position in record
                 if record.get(breadcrumb_key) and len(record.get(breadcrumb_key)) > index:
@@ -80,8 +80,9 @@ class Deserializer(TypeDeserializer):
             else:
                 if output.get(breadcrumb[0]) is None:
                     output[breadcrumb[0]] = {}
-                # send empty dict if the data is not found in the record
-                self._apply_projection(record.get(breadcrumb[0], {}), breadcrumb[1:], output[breadcrumb[0]])
+                # keep empty dict if the data is not found in the record
+                if record.get(breadcrumb[0]):
+                    self._apply_projection(record.get(breadcrumb[0], {}), breadcrumb[1:], output[breadcrumb[0]])
 
     def apply_projection(self, record, projections):
         output = {}

@@ -99,7 +99,7 @@ class TestDeserializer(unittest.TestCase):
         deserializer = deserialize.Deserializer()
         output = deserializer.apply_projection(mock_record, mock_projections)
         # veriy that we get None when the parent data is not found
-        self.assertEquals(output, {'Artist': 'No One You Know5', 'metadata': {'inner_metadata': None}})
+        self.assertEquals(output, {'Artist': 'No One You Know5', 'metadata': {}})
 
     def test_projection_expression_parent_child_data_dictionary_positive(self):
         '''
@@ -114,3 +114,17 @@ class TestDeserializer(unittest.TestCase):
         output = deserializer.apply_projection(mock_record, mock_projections)
         # veriy that we get None when the parent data is not found
         self.assertEquals(output, {'Artist': 'No One You Know5', 'metadata': {'inner_metadata': 'Test'}})
+
+    def test_projection_expression_parent_child_data_list_different_order(self):
+        '''
+            Veriy that we get no error when add list projection in decreasing order and it is not found
+            Example Projection: metadata[1], metadata[0].inner_metadata
+            Stream Record: {'metadata': [{'inner_metadata': 'Test'}]}
+        '''
+        mock_record = {'metadata': [{'inner_metadata': 'Test'}]}
+        mock_projections =  [['metadata[1]'], ['metadata[0]', 'inner_metadata']]
+
+        deserializer = deserialize.Deserializer()
+        output = deserializer.apply_projection(mock_record, mock_projections)
+        # veriy that we get no error when add list projection in decreasing order and it is not found
+        self.assertEquals(output, {'metadata': [{'inner_metadata': 'Test'}]})
