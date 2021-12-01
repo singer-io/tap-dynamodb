@@ -78,10 +78,11 @@ def sync(config, state, stream):
     # Sometimes it might need to write an expression containing an attribute name that conflicts with a DynamoDB reserved word.
     # For example, table `A` contain field `Comment` but `Comment` is reserved word. so, it fail during fetch.
     expression = metadata.get(md_map, (), 'tap-mongodb.expression')
-    if projection is not None:
+
+    if projection:
         # Split projection string(fields than need to be fetched) to list
         projections = [x.strip() for x in projection.split(',')]
-        if expression is not None:
+        if expression:
             # Split expression string(reserved words) to list
             expressions = [x.strip() for x in expression.split(',')]
             projection, expression = prepare_expression(projections, expressions) # Prepare expression attributes for reserved word.
