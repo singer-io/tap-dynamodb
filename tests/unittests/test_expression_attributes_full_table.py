@@ -110,4 +110,33 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         
         # Verify that `scan` method called with expected paramater excluding `ExpressionAttributeNames` and `ProjectionExpression`
         self.assertEqual(res, [{'ExclusiveStartKey': {},'Limit': 1000,'TableName': ''}])
-        
+
+    @patch('singer.metadata.get', side_effect = ["test.tests[1], test.tests[2]", "test.tests[1], test.tests[2]"])
+    @patch('tap_dynamodb.sync_strategies.full_table.scan_table', return_value = {}) 
+    def test_scan_table_with_nested_expr_with_dict_and_list(self,mock_scan_table, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
+        """Test expression attribute for multiple reserve word passed in `expression` field."""
+        res = sync(CONFIG, STATE, STREAM)
+
+        # Verify that `scan_table` called with expected paramater including nestde expression attributes
+        mock_scan_table.assert_called_with('GoogleDocs', '#tesst.#tests1[1],#tesst.#tests2[2]', {'#tesst': 'test', '#tests1': 'tests', '#tests2': 'tests'}, {}, {'start_date': '2017-01-01', 
+        'account_id': 'dummy_account_id', 'role_name': 'dummy_role', 'external_id': 'dummy_external_id', 'region_name': 'dummy_region_name'})
+
+    @patch('singer.metadata.get', side_effect = ["tests[1], tests[2]", "tests[1], tests[2]"])
+    @patch('tap_dynamodb.sync_strategies.full_table.scan_table', return_value = {}) 
+    def test_scan_table_with_nested_expr_with_list(self,mock_scan_table, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
+        """Test expression attribute for multiple reserve word passed in `expression` field."""
+        res = sync(CONFIG, STATE, STREAM)
+
+        # Verify that `scan_table` called with expected paramater including nestde expression attributes
+        mock_scan_table.assert_called_with('GoogleDocs', '#tests1[1],#tests2[2]', {'#tests1': 'tests', '#tests2': 'tests'}, {}, {'start_date': '2017-01-01',
+        'account_id': 'dummy_account_id', 'role_name': 'dummy_role', 'external_id': 'dummy_external_id', 'region_name': 'dummy_region_name'})
+
+    @patch('singer.metadata.get', side_effect = ["tests.x", "tests.x"])
+    @patch('tap_dynamodb.sync_strategies.full_table.scan_table', return_value = {}) 
+    def test_scan_table_with_nested_expr_with_list(self,mock_scan_table, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
+        """Test expression attribute for multiple reserve word passed in `expression` field."""
+        res = sync(CONFIG, STATE, STREAM)
+
+        # Verify that `scan_table` called with expected paramater including nestde expression attributes
+        mock_scan_table.assert_called_with('GoogleDocs', '#tests.#xx', {'#tests': 'tests', '#xx': 'x'}, {}, {'start_date': '2017-01-01',
+        'account_id': 'dummy_account_id', 'role_name': 'dummy_role', 'external_id': 'dummy_external_id', 'region_name': 'dummy_region_name'})

@@ -117,6 +117,16 @@ def sync(config, state, stream):
 
     return rows_saved
 
+def get_expr_names(projection_element, expression_list):
+    half_length = int(len(projection_element)/2)
+    expr = "#{}".format(projection_element[:half_length+1]+projection_element[-2:]) # prepare expression attribute name
+    expr = expr.replace("[", "").replace("]", "")
+    proj_split = projection_element.split('[', 1)
+    expression_list[expr] = proj_split[0]
+    if len(proj_split) != 1:
+        expr = expr + '[' + proj_split[1]
+    return expr
+
 def prepare_expression(projections, expressions):
     """
     Prepare expression attributes for reserved word. Loop through all projection.
@@ -135,10 +145,17 @@ def prepare_expression(projections, expressions):
     expression_list = {}
     for projection_element in projections: # Loop through all projection.
         if projection_element in expressions: # Projection found in expressions(reserved word list)
-            half_length = int(len(projection_element)/2)
-            expr = "#{}".format(projection_element[:half_length+1]+projection_element[-2:]) # prepare expression attribute name
-            expression_list[expr] = projection_element # Dict element with key as expression attribute name and value as projection
-            projections[i] = expr # Replace projection with expression attribute name in projections
+            if '.' in projection_element:
+                proj_list = projection_element.split('.')
+                nested_expr = []
+                for each_proj in proj_list:
+                    expr = get_expr_names(each_proj, expression_list)
+                    nested_expr.append(expr)
+                expr = '.'.join(nested_expr)
+                projections[i] = expr
+            else:
+                expr = get_expr_names(projection_element, expression_list)
+                projections[i] = expr # Replace projection with expression attribute name in projections
         i = i + 1
 
     return ','.join(projections), expression_list
