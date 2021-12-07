@@ -23,7 +23,7 @@ class DynamoDBProjections(TestDynamoDBBase):
              'generator': self.generate_items,
              'num_rows': 100,
              # Added two extra reserve word field `Absolute`, `Comment` to verify expression attributes
-             'ProjectionExpression': 'Comment, int_id, string_field, decimal_field, int_list_field[1], map_field.map_entry_1, string_list[2], map_field.list_entry[2], list_map[1].a',
+             'ProjectionExpression': 'Name[1].Comment,Comment, int_id, string_field, decimal_field, int_list_field[1], map_field.map_entry_1, string_list[2], map_field.list_entry[2], list_map[1].a',
              'top_level_keys': {'Comment', 'int_id', 'string_field', 'decimal_field', 'int_list_field', 'map_field', 'string_list', 'list_map'},
              'top_level_list_keys': {'int_list_field', 'string_list', 'list_map'},
              'nested_map_keys': {'map_field': {'map_entry_1', 'list_entry'}},
@@ -36,6 +36,7 @@ class DynamoDBProjections(TestDynamoDBBase):
         for i in range(num_items):
             record = {
                 'Comment': 'Talend stitch',
+                'Name': ['name1', {'Comment': "Test_comment"}],
                 'int_id': i,
                 'decimal_field': decimal.Decimal(str(i) + '.00000000001'),
                 'string_field': self.random_string_generator(),
@@ -74,7 +75,7 @@ class DynamoDBProjections(TestDynamoDBBase):
             annotated_schema = menagerie.get_annotated_schema(conn_id, stream_catalog['stream_id'])
             additional_md = [{"breadcrumb" : [], "metadata" : {
                 'replication-method' : 'FULL_TABLE',
-                'tap-mongodb.expression': 'Comment', # `expression` field for reserve word.
+                'tap-mongodb.expression': 'Comment, Name[1].Comment', # `expression` field for reserve word.
                 'tap-mongodb.projection': expected_config['ProjectionExpression']
             }}]
             connections.select_catalog_and_fields_via_metadata(conn_id,
