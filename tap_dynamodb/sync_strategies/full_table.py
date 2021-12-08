@@ -120,9 +120,16 @@ def sync(config, state, stream):
 def get_expr_names(projection_element, expression_list):
     half_length = int(len(projection_element)/2)
     expr = "#{}".format(projection_element[:half_length+1]+projection_element[-2:]) # prepare expression attribute name
+    # remove `[` and `]` from the expression name
     expr = expr.replace("[", "").replace("]", "")
+    # if the projection is a list, it will contain the index in `[]`, hence we need to split
+    # through '[' to get the index stored in the projection inside `[]` and append the remaining
+    # to the newly created `expr`.
     proj_split = projection_element.split('[', 1)
     expression_list[expr] = proj_split[0]
+    # if the length of the split is 1, it means there is no `[]` in the projection,
+    # hence there's no need to append the index. If the length is 1, the second element
+    # of the `proj_split` would be appended to the `expr`.
     if len(proj_split) != 1:
         expr = expr + '[' + proj_split[1]
     return expr
@@ -137,25 +144,33 @@ def prepare_expression(projections, expressions):
     value as projection and replace projection with expression attribute name in projections(list of fields than need
     to be fetched). Return expression dict and comma seprated string of projections.
     Example :
-    projections =
-    ["Comment", "Ticket"], expressions = ["Comment"]
+    projections = ["Comment", "Ticket"], expressions = ["Comment"]
     return = "#Commnt, Ticket", {"#Commnt" : "Comment"}
+    Example of nested expression :
+    projections = ["Name[0].Comment"], expressions = ["Name.Comment"]
+    return = "#Namme[0].#Commnt", {"#Namme": "Name", "#Commnt": "Comment"}
     """
     i = 0
     expression_list = {}
-    for projection_element in projections: # Loop through all projection.
-        if projection_element in expressions: # Projection found in expressions(reserved word list)
+    # Loop through all projection.
+    for projection_element in projections:
+        # Projection found in expressions(reserved word list)
+        if projection_element in expressions:
+            # if it is a nested projection, it needs to be handled differently
             if '.' in projection_element:
+                # store the parent and th childs split by `.` in a list
                 proj_list = projection_element.split('.')
                 nested_expr = []
                 for each_proj in proj_list:
                     expr = get_expr_names(each_proj, expression_list)
                     nested_expr.append(expr)
+                # join the expression names by `.`
                 expr = '.'.join(nested_expr)
                 projections[i] = expr
             else:
                 expr = get_expr_names(projection_element, expression_list)
-                projections[i] = expr # Replace projection with expression attribute name in projections
+                # Replace projection with expression attribute name in projections
+                projections[i] = expr
         i = i + 1
 
     return ','.join(projections), expression_list
