@@ -76,14 +76,14 @@ def sync(config, state, stream):
 
     # An expression attribute name is a placeholder that one use in an Amazon DynamoDB expression as an alternative to an actual attribute name.
     # Sometimes it might need to write an expression containing an attribute name that conflicts with a DynamoDB reserved word.
-    # For example, table `A` contain field `Comment` but `Comment` is reserved word. so, it fail during fetch.
+    # For example, table `A` contain field `Comment` but `Comment` is reserved word. So, it fail during fetch.
     expression = metadata.get(md_map, (), 'tap-mongodb.expression')
 
     if projection:
-        # Split projection string(fields than need to be fetched) to list
+        # Split projection field value(fields that need to be fetched) to list
         projections = [x.strip() for x in projection.split(',')]
         if expression:
-            # Split expression string(reserved words) to list
+            # Split expression field value(reserved words) to list
             expressions = [x.strip() for x in expression.split(',')]
             projection, expression = prepare_expression(projections, expressions) # Prepare expression attributes for reserved word.
     rows_saved = 0
@@ -136,12 +136,12 @@ def get_expr_names(projection_element, expression_list):
 
 def prepare_expression(projections, expressions):
     """
-    Prepare expression attributes for reserved word. Loop through all projection.
+    Prepare expression attributes for reserved word. Loop through all projections.
     If projection found in expressions(reserved word list) then prepare expression attribute name for the same with
     starting of # sign followed by the combination of 1st half part of projection, next character of 1st half and last 2 character of projection.
     Because as per the documentation an expression attribute name must begin with a pound sign (#), and be followed
-    by one or more alphanumeric characters.Prepare expression Dict element with key as expression attribute name and
-    value as projection and replace projection with expression attribute name in projections(list of fields than need
+    by one or more alphanumeric characters. Prepare expression Dict element with key as expression attribute name and
+    value as projection and replace projection with expression attribute name in projections(list of fields that need
     to be fetched). Return expression dict and comma seprated string of projections.
     Example :
     projections = ["Comment", "Ticket"], expressions = ["Comment"]
