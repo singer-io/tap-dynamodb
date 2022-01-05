@@ -74,9 +74,9 @@ def sync(config, state, stream):
     md_map = metadata.to_map(stream['metadata'])
     projection = metadata.get(md_map, (), 'tap-mongodb.projection')
 
-    # An expression attribute name is a placeholder that one use in an Amazon DynamoDB expression as an alternative to an actual attribute name.
+    # An expression attribute name is a placeholder that one uses in an Amazon DynamoDB expression as an alternative to an actual attribute name.
     # Sometimes it might need to write an expression containing an attribute name that conflicts with a DynamoDB reserved word.
-    # For example, table `A` contain field `Comment` but `Comment` is reserved word. So, it fail during fetch.
+    # For example, table `A` contains the field `Comment` but `Comment` is a reserved word. So, it fails during fetch.
     expression = metadata.get(md_map, (), 'tap-mongodb.expression')
 
     if projection:
