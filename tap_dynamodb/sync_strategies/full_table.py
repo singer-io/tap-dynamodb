@@ -118,6 +118,16 @@ def sync(config, state, stream):
     return rows_saved
 
 def get_expr_names(projection_element, expression_list):
+    '''
+    Prepare expression names for general expression attributes as well as for each of the nested
+    expression attributes.
+    For example:
+    projections = ["Comment", "Ticket"], expressions = ["Comment"]
+    return = "#Commnt"
+    Example of nested expression :
+    projections = ["Name[0].Comment"], expressions = ["Name.Comment"]
+    return = "#Namme[0]" and "#Commnt" in the second loop call
+    '''
     half_length = int(len(projection_element)/2)
     expr = "#{}".format(projection_element[:half_length+1]+projection_element[-2:]) # prepare expression attribute name
     # remove `[` and `]` from the expression name
