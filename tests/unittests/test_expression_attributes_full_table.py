@@ -34,20 +34,20 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         res = sync(CONFIG, STATE, STREAM)
 
         # Verify that `scan_table` called with expected paramater including expression attributes
-        mock_scan_table.assert_called_with('GoogleDocs', '#Commnt,Sheet', {'#Commnt': 'Comment'}, {}, {'start_date': '2017-01-01', 
+        mock_scan_table.assert_called_with('GoogleDocs', '#Comment,Sheet', {'#Comment': 'Comment'}, {}, {'start_date': '2017-01-01', 
         'account_id': 'dummy_account_id', 'role_name': 'dummy_role', 'external_id': 'dummy_external_id', 'region_name': 'dummy_region_name'})
 
 
     @patch('tap_dynamodb.dynamodb.get_client', return_value = MockClient())        
     def test_scan_table_with_single_expression(self, mock_get_client, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test that scan method called with extra `ExpressionAttributeNames` parameter for single reserve word. 
-        Here we mocked get_client with return value as object of MockClient class. Mcked scan method to return arguments 
+        Here we mocked get_client with return value as object of MockClient class. Mocked scan method to return arguments 
         which we passed."""
-        res = list(scan_table('', '#Commnt,Sheet', {'#Commnt': 'Comment'}, {}, {}))
+        res = list(scan_table('', '#Comment,Sheet', {'#Comment': 'Comment'}, {}, {}))
 
          # Verify that `scan` method called with expected paramater including `ExpressionAttributeNames` and `ProjectionExpression`
-        self.assertEqual(res, [{'ExclusiveStartKey': {},'ExpressionAttributeNames': {'#Commnt': 'Comment'},'Limit': 1000,
-                                'ProjectionExpression': '#Commnt,Sheet','TableName': ''}])
+        self.assertEqual(res, [{'ExclusiveStartKey': {},'ExpressionAttributeNames': {'#Comment': 'Comment'},'Limit': 1000,
+                                'ProjectionExpression': '#Comment,Sheet','TableName': ''}])
 
     @patch('singer.metadata.get', side_effect = ["Comment, Sheet", "Comment, Sheet"])
     @patch('tap_dynamodb.sync_strategies.full_table.scan_table', return_value = {}) 
@@ -56,20 +56,20 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         res = sync(CONFIG, STATE, STREAM)
 
         # Verify that `scan_table` called with expected paramater including multiple expression attributes
-        mock_scan_table.assert_called_with('GoogleDocs', '#Commnt,#Sheet', {'#Commnt': 'Comment', '#Sheet': 'Sheet'}, {}, {'start_date': '2017-01-01', 
+        mock_scan_table.assert_called_with('GoogleDocs', '#Comment,#Sheet', {'#Comment': 'Comment', '#Sheet': 'Sheet'}, {}, {'start_date': '2017-01-01', 
         'account_id': 'dummy_account_id', 'role_name': 'dummy_role', 'external_id': 'dummy_external_id', 'region_name': 'dummy_region_name'})
 
 
     @patch('tap_dynamodb.dynamodb.get_client', return_value = MockClient())        
     def test_scan_table_with_multiple_expression(self, mock_get_client, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test that scan method called with extra `ExpressionAttributeNames` parameter for multiple reserve word. 
-        Here we mocked get_client with return value as object of MockClient class. Mcked scan method to return arguments 
+        Here we mocked get_client with return value as object of MockClient class. Mocked scan method to return arguments 
         which we passed."""
-        res = list(scan_table('', '#Commnt,#Sheet', {'#Commnt': 'Comment', '#Sheet': 'Sheet'}, {}, {}))
+        res = list(scan_table('', '#Comment,#Sheet', {'#Comment': 'Comment', '#Sheet': 'Sheet'}, {}, {}))
         
          # Verify that `scan` method called with expected paramater including `ExpressionAttributeNames` and `ProjectionExpression`
-        self.assertEqual(res, [{'ExclusiveStartKey': {},'ExpressionAttributeNames': {'#Commnt': 'Comment', '#Sheet': 'Sheet'},
-                                'Limit': 1000, 'ProjectionExpression': '#Commnt,#Sheet','TableName': ''}])
+        self.assertEqual(res, [{'ExclusiveStartKey': {},'ExpressionAttributeNames': {'#Comment': 'Comment', '#Sheet': 'Sheet'},
+                                'Limit': 1000, 'ProjectionExpression': '#Comment,#Sheet','TableName': ''}])
         
     @patch('singer.metadata.get', side_effect = ["Comment, Sheet", ""])
     @patch('tap_dynamodb.sync_strategies.full_table.scan_table', return_value = {}) 
@@ -84,7 +84,7 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
     @patch('tap_dynamodb.dynamodb.get_client', return_value = MockClient())        
     def test_scan_table_without_expression(self, mock_get_client, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test that scan method does not called with extra `ExpressionAttributeNames` parameter when no reserve word passed 
-        Here we mocked get_client with return value as object of MockClient class. Mcked scan method to return arguments
+        Here we mocked get_client with return value as object of MockClient class. Mocked scan method to return arguments
         which we passed."""
         res = list(scan_table('', 'Comment,Sheet', {}, {}, {}))
 
@@ -104,7 +104,7 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
     @patch('tap_dynamodb.dynamodb.get_client', return_value = MockClient())        
     def test_scan_table_without_projection(self, mock_get_client, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test that scan method does not called with `ExpressionAttributeNames` and `ProjectionExpression` parameter when empty value passed 
-        in `projection` Here we mocked get_client with return value as object of MockClient class. Mcked scan method to return arguments 
+        in `projection` Here we mocked get_client with return value as object of MockClient class. Mocked scan method to return arguments 
         which we passed."""
         res = list(scan_table('', '', '', {}, {}))
         
@@ -117,8 +117,8 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         """Test expression attribute for multiple reserve word passed in `expression` field."""
         res = sync(CONFIG, STATE, STREAM)
 
-        # Verify that `scan_table` called with expected paramater including nestde expression attributes
-        mock_scan_table.assert_called_with('GoogleDocs', '#tesst.#tests1[1],#tesst.#tests2[2]', {'#tesst': 'test', '#tests1': 'tests', '#tests2': 'tests'}, {}, {'start_date': '2017-01-01', 
+        # Verify that `scan_table` called with expected paramater including nested expression attributes
+        mock_scan_table.assert_called_with('GoogleDocs', '#test.#tests1[1],#test.#tests2[2]', {'#test': 'test', '#tests1': 'tests', '#tests2': 'tests'}, {}, {'start_date': '2017-01-01', 
         'account_id': 'dummy_account_id', 'role_name': 'dummy_role', 'external_id': 'dummy_external_id', 'region_name': 'dummy_region_name'})
 
     @patch('singer.metadata.get', side_effect = ["tests[1], tests[2]", "tests[1], tests[2]"])
@@ -127,7 +127,7 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         """Test expression attribute for multiple reserve word passed in `expression` field."""
         res = sync(CONFIG, STATE, STREAM)
 
-        # Verify that `scan_table` called with expected paramater including nestde expression attributes
+        # Verify that `scan_table` called with expected paramater including nested expression attributes
         mock_scan_table.assert_called_with('GoogleDocs', '#tests1[1],#tests2[2]', {'#tests1': 'tests', '#tests2': 'tests'}, {}, {'start_date': '2017-01-01',
         'account_id': 'dummy_account_id', 'role_name': 'dummy_role', 'external_id': 'dummy_external_id', 'region_name': 'dummy_region_name'})
 
@@ -137,6 +137,6 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         """Test expression attribute for multiple reserve word passed in `expression` field."""
         res = sync(CONFIG, STATE, STREAM)
 
-        # Verify that `scan_table` called with expected paramater including nestde expression attributes
-        mock_scan_table.assert_called_with('GoogleDocs', '#tests.#xx', {'#tests': 'tests', '#xx': 'x'}, {}, {'start_date': '2017-01-01',
+        # Verify that `scan_table` called with expected paramater including nested expression attributes
+        mock_scan_table.assert_called_with('GoogleDocs', '#tests.#x', {'#tests': 'tests', '#x': 'x'}, {}, {'start_date': '2017-01-01',
         'account_id': 'dummy_account_id', 'role_name': 'dummy_role', 'external_id': 'dummy_external_id', 'region_name': 'dummy_region_name'})
