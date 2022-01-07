@@ -9,7 +9,8 @@ LOGGER = singer.get_logger()
 WRITE_STATE_PERIOD = 1000
 
 SDC_DELETED_AT = "_sdc_deleted_at"
-
+MAX_TRIES = 5
+FACTOR = 2
 
 def get_shards(streams_client, stream_arn):
     '''
@@ -118,8 +119,8 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
 # Backoff for both ReadTimeout and ConnectTimeout error for 5 times
 @backoff.on_exception(backoff.expo,
                       (ReadTimeoutError, ConnectTimeoutError),
-                      max_tries=5,
-                      factor=2)
+                      max_tries=MAX_TRIES,
+                      factor=FACTOR)
 def sync(config, state, stream):
     table_name = stream['tap_stream_id']
 
@@ -219,8 +220,8 @@ def has_stream_aged_out(state, table_name):
 # Backoff for both ReadTimeout and ConnectTimeout error for 5 times
 @backoff.on_exception(backoff.expo,
                       (ReadTimeoutError, ConnectTimeoutError),
-                      max_tries=5,
-                      factor=2)
+                      max_tries=MAX_TRIES,
+                      factor=FACTOR)
 def get_initial_bookmarks(config, state, table_name):
     '''
     Returns the state including all bookmarks necessary for the initial
