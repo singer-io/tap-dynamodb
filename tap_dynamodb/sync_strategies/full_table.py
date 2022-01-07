@@ -1,5 +1,5 @@
 import time
-
+import copy
 import singer
 from singer import metadata
 from tap_dynamodb import dynamodb
@@ -123,14 +123,13 @@ def get_expr_names(projection_element, expression_list):
     expression attributes.
     For example:
     projections = ["Comment", "Ticket"], expressions = ["Comment"]
-    return = "#Commnt"
+    return = "#Comment"
     Example of nested expression :
     projections = ["Name[0].Comment"], expressions = ["Name.Comment"]
-    return = "#Namme[0]" and "#Commnt" in the second loop call
+    return = "#Name[0]" and "#Comment" in the second loop call
     '''
-    half_length = int(len(projection_element)/2)
-    expr = "#{}".format(projection_element[:half_length+1]+projection_element[-2:]) # prepare expression attribute name
-    # remove `[` and `]` from the expression name
+    expr = "#{}".format(projection_element)
+    # remove `[` and `]` from the expression name as it throws exception.
     expr = expr.replace("[", "").replace("]", "")
     # if the projection is a list, it will contain the index in `[]`, hence we need to split
     # through '[' to get the index stored in the projection inside `[]` and append the remaining
@@ -152,23 +151,23 @@ def prepare_expression(projections, expressions):
     Because as per the documentation an expression attribute name must begin with a pound sign (#), and be followed
     by one or more alphanumeric characters. Prepare expression Dict element with key as expression attribute name and
     value as projection and replace projection with expression attribute name in projections(list of fields that need
-    to be fetched). Return expression dict and comma seprated string of projections.
+    to be fetched). Return expression dict and comma separated string of projections.
     Example :
     projections = ["Comment", "Ticket"], expressions = ["Comment"]
-    return = "#Commnt, Ticket", {"#Commnt" : "Comment"}
+    return = "#Comment, Ticket", {"#Comment" : "Comment"}
     Example of nested expression :
     projections = ["Name[0].Comment"], expressions = ["Name.Comment"]
-    return = "#Namme[0].#Commnt", {"#Namme": "Name", "#Commnt": "Comment"}
+    return = "#Name[0].#Comment", {"#Name": "Name", "#Comment": "Comment"}
     """
-    i = 0
     expression_list = {}
+    return_projection= copy.deepcopy(projections)
     # Loop through all projection.
-    for projection_element in projections:
+    for index, projection_element in enumerate(return_projection):
         # Projection found in expressions(reserved word list)
         if projection_element in expressions:
             # if it is a nested projection, it needs to be handled differently
             if '.' in projection_element:
-                # store the parent and th childs split by `.` in a list
+                # store the parent and the child attributes split by `.` in a list
                 proj_list = projection_element.split('.')
                 nested_expr = []
                 for each_proj in proj_list:
@@ -176,11 +175,11 @@ def prepare_expression(projections, expressions):
                     nested_expr.append(expr)
                 # join the expression names by `.`
                 expr = '.'.join(nested_expr)
-                projections[i] = expr
+                return_projection[index] = expr
             else:
                 expr = get_expr_names(projection_element, expression_list)
                 # Replace projection with expression attribute name in projections
-                projections[i] = expr
-        i = i + 1
+                return_projection[index] = expr
 
-    return ','.join(projections), expression_list
+    return ','.join(return_projection), expression_list
+
