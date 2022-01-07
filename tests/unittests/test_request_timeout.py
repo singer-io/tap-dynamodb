@@ -1,11 +1,9 @@
 from tap_dynamodb.sync_strategies import full_table, log_based
-from tap_dynamodb import LOGGER, discover, dynamodb
+from tap_dynamodb import discover, dynamodb
 import tap_dynamodb
 import unittest
 from unittest import mock
-from unittest.mock import Mock
-from unittest.case import TestCase
-from botocore.exceptions import ClientError, ConnectTimeoutError, ReadTimeoutError
+from botocore.exceptions import ConnectTimeoutError, ReadTimeoutError
 
 class MockClient():
     def __init__(self,endpoint_url=None):
