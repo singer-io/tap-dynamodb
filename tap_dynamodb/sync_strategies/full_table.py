@@ -182,4 +182,3 @@ def prepare_expression(projections, expressions):
                 return_projection[index] = expr
 
     return ','.join(return_projection), expression_list
-
