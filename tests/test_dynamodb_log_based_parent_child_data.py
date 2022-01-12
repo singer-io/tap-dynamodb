@@ -13,6 +13,7 @@ class DynamoDBLogBasedParentChildData(TestDynamoDBBase):
         - The tap does not break when the data a specific position is not found in the record
     """
 
+    # expected table configs
     def expected_table_config(self):
         return [
             {
@@ -27,6 +28,7 @@ class DynamoDBLogBasedParentChildData(TestDynamoDBBase):
             }
         ]
 
+    # send desired data for testing
     def generate_items(self, num_items, start_key=0):
         serializer = TypeSerializer()
         for i in range(start_key, start_key + num_items):
@@ -88,12 +90,13 @@ class DynamoDBLogBasedParentChildData(TestDynamoDBBase):
 
         for stream in expected_streams:
             messages = messages_by_stream.get(stream).get('messages')
-            for message in messages:
-                if message.get('action') == 'upsert':
-                    # verify that we git 'None' for child data when parent data is not found
-                    self.assertIsNone(message.get('data').get('map_field').get('map_entry_1'))
-                    # verify that we only get the available data if the data at a particular index is not found
-                    self.assertEquals(message.get('data').get('test_list_1'), [])
-                    self.assertEquals(message.get('data').get('test_list_2'), ['list_2_data'])
-                    # verify that we got empty map if the parent data at a particular index is not found for child data
-                    self.assertEquals(message.get('data').get('test_list_3'), [{}])
+            records = [message.get('data') for message in messages if message.get('action') == 'upsert']
+            for record in records:
+
+                # verify that we get 'None' for child data when parent data is not found
+                self.assertIsNone(record.get('map_field').get('map_entry_1'))
+                # verify that we only get the available data if the data at a particular index is not found
+                self.assertEquals(record.get('test_list_1'), [])
+                self.assertEquals(record.get('test_list_2'), ['list_2_data'])
+                # verify that we got empty map if the parent data at a particular index is not found for child data
+                self.assertEquals(record.get('test_list_3'), [{}])
