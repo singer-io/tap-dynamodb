@@ -2,7 +2,6 @@ import singer
 
 from boto3.dynamodb.types import TypeSerializer
 
-from tap_tester.scenario import (SCENARIOS)
 from tap_tester import connections
 from tap_tester import menagerie
 from tap_tester import runner
@@ -202,7 +201,3 @@ class DynamoDBLogBased(TestDynamoDBBase):
             # as the full table sync
             state['bookmarks'][table_name].pop('finished_shards')
             menagerie.set_state(conn_id, state, version=state_version)
-
-
-
-SCENARIOS.add(DynamoDBLogBased)

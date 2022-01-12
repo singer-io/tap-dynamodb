@@ -2,7 +2,6 @@ import singer
 
 from boto3.dynamodb.types import TypeSerializer
 
-from tap_tester.scenario import (SCENARIOS)
 from tap_tester import connections
 from tap_tester import menagerie
 from tap_tester import runner
@@ -143,6 +142,3 @@ class DynamoDBLogBased(TestDynamoDBBase):
             self.assertEqual(31, len(stream['messages']))
 
         state = menagerie.get_state(conn_id)
-
-
-SCENARIOS.add(DynamoDBLogBased)
