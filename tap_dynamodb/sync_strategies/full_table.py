@@ -125,7 +125,7 @@ def get_expr_names(projection_element, expression_list):
     projections = ["Comment", "Ticket"], expressions = ["Comment"]
     return = "#Comment"
     Example of nested expression :
-    projections = ["Name[0].Comment"], expressions = ["Name.Comment"]
+    projections = ["Name[0].Comment"], expressions = ["Name[0].Comment"]
     return = "#Name[0]" and "#Comment" in the second loop call
     '''
     expr = "#{}".format(projection_element)
@@ -156,7 +156,7 @@ def prepare_expression(projections, expressions):
     projections = ["Comment", "Ticket"], expressions = ["Comment"]
     return = "#Comment, Ticket", {"#Comment" : "Comment"}
     Example of nested expression :
-    projections = ["Name[0].Comment"], expressions = ["Name.Comment"]
+    projections = ["Name[0].Comment"], expressions = ["Name[0].Comment"]
     return = "#Name[0].#Comment", {"#Name": "Name", "#Comment": "Comment"}
     """
     expression_list = {}
