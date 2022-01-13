@@ -58,24 +58,10 @@ class Deserializer(TypeDeserializer):
                 breadcrumb_key = breadcrumb[0].split('[')[0]
                 index = int(breadcrumb[0].split('[')[1].split(']')[0])
                 if output.get(breadcrumb_key):
-                    # record: {'Artist': 'No One You Know5', 'metadata': ['test1']}
-                    # main breadcrumb = [['metadata[0]'], ['metadata[1]']]
-                    # current breadcrumb = ['metadata[1]']
-                    # current output = {'metadata': ['test1']}
-                    # expected output = {'metadata': ['test1']}
-                    #       as "metadata" has only 1 item and the current breadcrumb is expecting 2nd item
-
                     # only prepare output if the list field contains data at that index position in record
                     if len(record.get(breadcrumb_key)) > index:
                         output[breadcrumb_key].append(record[breadcrumb_key][index])
                 else:
-                    # record: {'Artist': 'No One You Know5'}
-                    # main breadcrumb = [['metadata[0]']]
-                    # current breadcrumb = ['metadata[0]']
-                    # current output = {}
-                    # expected output = {'metadata': []}
-                    #       as "metadata" does not have any items and the current breadcrumb is expecting 1st item
-
                     output[breadcrumb_key] = []
                     # only prepare output if the list field contains data at that index position in record
                     if record.get(breadcrumb_key) and len(record.get(breadcrumb_key)) > index:
@@ -86,32 +72,16 @@ class Deserializer(TypeDeserializer):
             if '[' in breadcrumb[0]:
                 breadcrumb_key = breadcrumb[0].split('[')[0]
                 index = int(breadcrumb[0].split('[')[1].split(']')[0])
-                if not output.get(breadcrumb_key):
+                if breadcrumb_key not in output:
                     output[breadcrumb_key] = [{}]
-
-                # record: {'Artist': 'No One You Know5'}
-                # main breadcrumb = [['metadata[0]', 'Age']]
-                # current breadcrumb = ['metadata[0]', 'Age']
-                # current output = {'metadata': [{}]}
-                # expected output = {'metadata': [{}]}
-                #       as "metadata" is not present and the current breadcrumb is expecting 1st item and which is a parent
-
                 # only prepare output if the list field contains data at that index position in record
-                if record.get(breadcrumb_key) and len(record.get(breadcrumb_key)) > index:
+                if breadcrumb_key in record and len(record.get(breadcrumb_key)) > index:
                     self._apply_projection(record[breadcrumb_key][index], breadcrumb[1:], output[breadcrumb_key][0])
             else:
                 if output.get(breadcrumb[0]) is None:
                     output[breadcrumb[0]] = {}
-
-                # record: {'Artist': 'No One You Know5'}
-                # main breadcrumb = [['metadata', 'inner_metadata']]
-                # current breadcrumb = ['metadata', 'inner_metadata']
-                # current output = {'metadata': {}}
-                # expected output = {'metadata': {}}
-                #       as "metadata" is not present and the current breadcrumb is expecting it as a parent
-
                 # keep empty dict if the data is not found in the record
-                if record.get(breadcrumb[0]):
+                if breadcrumb[0] in record:
                     self._apply_projection(record.get(breadcrumb[0], {}), breadcrumb[1:], output[breadcrumb[0]])
 
     def apply_projection(self, record, projections):
