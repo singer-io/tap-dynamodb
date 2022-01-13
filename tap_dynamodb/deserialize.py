@@ -54,7 +54,7 @@ class Deserializer(TypeDeserializer):
 
     def _apply_projection(self, record, breadcrumb, output):
         """
-        The LOG_BASED replication method buses the get_records method which gets all the records by default.
+        The LOG_BASED replication method uses the get_records method which gets all the records by default.
         In case of projection expression, parse the response retrieved from the API and filter the output
         based on projection expressions
         """
