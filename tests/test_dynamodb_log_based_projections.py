@@ -3,7 +3,6 @@ import singer
 
 from boto3.dynamodb.types import TypeSerializer
 
-from tap_tester.scenario import (SCENARIOS)
 from tap_tester import connections
 from tap_tester import menagerie
 from tap_tester import runner
@@ -210,6 +209,3 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
                         for list_key in config['top_level_list_keys']:
                             self.assertTrue(isinstance(message['data'][list_key], list))
                         self.assertEqual(config['nested_map_keys']['map_field'], {*message['data']['map_field'].keys()})
-
-
-SCENARIOS.add(DynamoDBLogBasedProjections)
