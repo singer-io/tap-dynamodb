@@ -1,4 +1,6 @@
 import datetime
+import json
+import copy
 from singer import metadata
 import singer
 
@@ -115,6 +117,27 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
     singer.write_state(state)
     return rows_synced
 
+def prepare_projection(projection, expression):
+    '''
+    Prepare the projection based on the expression attributes
+    For example:
+    projections = "#c", expressions = {"#c": "Comment"}
+    return = ["Comment"]
+    Example of nested expression :
+    projections = "#name[0].#age", expressions = {"#name": "Name", "#age": "Age"}
+    return = ['Name[4]', 'Age']
+    '''
+    expression = json.loads(expression)
+    return_projection = copy.deepcopy(projection)
+    for key, value in expression.items():
+        for ind, element in enumerate(projection):
+            if element == key:
+                return_projection[ind] = value
+            if '[' in element and key in element:
+                # replace the value with the key of expression attributes
+                return_projection[ind] = return_projection[ind].replace(key, value)
+    return return_projection
+    
 
 def sync(config, state, stream):
     table_name = stream['tap_stream_id']
@@ -124,8 +147,12 @@ def sync(config, state, stream):
 
     md_map = metadata.to_map(stream['metadata'])
     projection = metadata.get(md_map, (), 'tap-mongodb.projection')
+    expression = metadata.get(md_map, (), 'tap-dynamodb.expression')
     if projection is not None:
         projection = [x.strip().split('.') for x in projection.split(',')]
+        if expression:
+            for index, each in enumerate(projection):
+                projection[index] = prepare_projection(each, expression)
 
     # Write activate version message
     stream_version = singer.get_bookmark(state, table_name, 'version')
