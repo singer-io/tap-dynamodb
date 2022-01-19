@@ -125,7 +125,7 @@ def prepare_projection(projection, expression):
     return = ["Comment"]
     Example of nested expression :
     projections = "#name[0].#age", expressions = {"#name": "Name", "#age": "Age"}
-    return = ['Name[4]', 'Age']
+    return = ['Name[0]', 'Age']
     '''
     expression = json.loads(expression)
     return_projection = copy.deepcopy(projection)
