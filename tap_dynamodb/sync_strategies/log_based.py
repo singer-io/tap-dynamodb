@@ -137,7 +137,7 @@ def prepare_projection(projection, expression):
                 # replace the value with the key of expression attributes
                 return_projection[ind] = return_projection[ind].replace(key, value)
     return return_projection
-    
+
 
 def sync(config, state, stream):
     table_name = stream['tap_stream_id']
