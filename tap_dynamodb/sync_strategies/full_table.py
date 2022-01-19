@@ -1,5 +1,5 @@
 import time
-import copy
+import json
 import singer
 from singer import metadata
 from tap_dynamodb import dynamodb
@@ -18,7 +18,7 @@ def scan_table(table_name, projection, expression, last_evaluated_key, config):
         scan_params['ProjectionExpression'] = projection
     if expression:
         # Add `ExpressionAttributeNames` parameter for reserved word.
-        scan_params['ExpressionAttributeNames'] = expression
+        scan_params['ExpressionAttributeNames'] = json.loads(expression)
     if last_evaluated_key is not None:
         scan_params['ExclusiveStartKey'] = last_evaluated_key
 
@@ -77,19 +77,12 @@ def sync(config, state, stream):
     # An expression attribute name is a placeholder that one uses in an Amazon DynamoDB expression as an alternative to an actual attribute name.
     # Sometimes it might need to write an expression containing an attribute name that conflicts with a DynamoDB reserved word.
     # For example, table `A` contains the field `Comment` but `Comment` is a reserved word. So, it fails during fetch.
-    expression = metadata.get(md_map, (), 'tap-mongodb.expression')
+    expression = metadata.get(md_map, (), 'tap-dynamodb.expression')
 
-    if projection:
-        # Split projection field value(fields that need to be fetched) to list
-        projections = [x.strip() for x in projection.split(',')]
-        if expression:
-            # Split expression field value(reserved words) to list
-            expressions = [x.strip() for x in expression.split(',')]
-            projection, expression = prepare_expression(projections, expressions) # Prepare expression attributes for reserved word.
     rows_saved = 0
 
     deserializer = Deserializer()
-    for result in scan_table(table_name, projection, expression, last_evaluated_key, config): # Pass extra expressions attribute for reserved word.
+    for result in scan_table(table_name, projection, expression, last_evaluated_key, config):
         for item in result.get('Items', []):
             rows_saved += 1
             # TODO: Do we actually have to put the item we retreive from
@@ -116,69 +109,3 @@ def sync(config, state, stream):
     singer.write_version(table_name, stream_version)
 
     return rows_saved
-
-def get_expr_names(projection_element, expression_list):
-    '''
-    Prepare expression names for general expression attributes as well as for each of the nested
-    expression attributes.
-    For example:
-    projections = ["Comment", "Ticket"], expressions = ["Comment"]
-    return = "#Comment"
-    Example of nested expression :
-    projections = ["Name[0].Comment"], expressions = ["Name[0].Comment"]
-    return = "#Name[0]" and "#Comment" in the second loop call
-    '''
-    expr = "#{}".format(projection_element)
-    # remove `[` and `]` from the expression name as it throws exception.
-    expr = expr.replace("[", "").replace("]", "")
-    # if the projection is a list, it will contain the index in `[]`, hence we need to split
-    # through '[' to get the index stored in the projection inside `[]` and append the remaining
-    # to the newly created `expr`.
-    proj_split = projection_element.split('[', 1)
-    expression_list[expr] = proj_split[0]
-    # if the length of the split is 1, it means there is no `[]` in the projection,
-    # hence there's no need to append the index. If the length is 1, the second element
-    # of the `proj_split` would be appended to the `expr`.
-    if len(proj_split) != 1:
-        expr = expr + '[' + proj_split[1]
-    return expr
-
-def prepare_expression(projections, expressions):
-    """
-    Prepare expression attributes for reserved word. Loop through all projections.
-    If projection found in expressions(reserved word list) then prepare expression attribute name for the same with
-    starting of # sign followed by the combination of 1st half part of projection, next character of 1st half and last 2 character of projection.
-    Because as per the documentation an expression attribute name must begin with a pound sign (#), and be followed
-    by one or more alphanumeric characters. Prepare expression Dict element with key as expression attribute name and
-    value as projection and replace projection with expression attribute name in projections(list of fields that need
-    to be fetched). Return expression dict and comma separated string of projections.
-    Example :
-    projections = ["Comment", "Ticket"], expressions = ["Comment"]
-    return = "#Comment, Ticket", {"#Comment" : "Comment"}
-    Example of nested expression :
-    projections = ["Name[0].Comment"], expressions = ["Name[0].Comment"]
-    return = "#Name[0].#Comment", {"#Name": "Name", "#Comment": "Comment"}
-    """
-    expression_list = {}
-    return_projection= copy.deepcopy(projections)
-    # Loop through all projection.
-    for index, projection_element in enumerate(return_projection):
-        # Projection found in expressions(reserved word list)
-        if projection_element in expressions:
-            # if it is a nested projection, it needs to be handled differently
-            if '.' in projection_element:
-                # store the parent and the child attributes split by `.` in a list
-                proj_list = projection_element.split('.')
-                nested_expr = []
-                for each_proj in proj_list:
-                    expr = get_expr_names(each_proj, expression_list)
-                    nested_expr.append(expr)
-                # join the expression names by `.`
-                expr = '.'.join(nested_expr)
-                return_projection[index] = expr
-            else:
-                expr = get_expr_names(projection_element, expression_list)
-                # Replace projection with expression attribute name in projections
-                return_projection[index] = expr
-
-    return ','.join(return_projection), expression_list

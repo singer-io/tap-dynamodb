@@ -21,8 +21,8 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
                 'HashType': 'N',
                 'generator': self.generate_items,
                 'num_rows': 100,
-                # Added three extra reserve word fields `Absolute`, `Comment` and `Name[1].Comment` to verify expression attributes
-                'ProjectionExpression': 'Name[1].Comment, Name[2].TestField.Comment, Absolute, Comment, int_id, string_field, decimal_field, int_list_field[1], map_field.map_entry_1, string_list[2], map_field.list_entry[2], list_map[1].a',
+                # Added three extra reserve words to verify the sync to retrieve `Absolute`, `Comment` and `Name[1].Comment`
+                'ProjectionExpression': '#n[1].#c, #n[2].#tf.#c, #a, #c, int_id, string_field, decimal_field, int_list_field[1], map_field.map_entry_1, string_list[2], map_field.list_entry[2], list_map[1].a',
                 'top_level_keys': {'Name', 'Absolute', 'Comment', 'int_id', 'string_field', 'decimal_field', 'int_list_field', 'map_field', 'string_list', 'list_map'},
                 'top_level_list_keys': {'int_list_field', 'string_list', 'list_map', 'Name'},
                 'nested_map_keys': {'map_field': {'map_entry_1', 'list_entry'}},
@@ -76,7 +76,7 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
                     "breadcrumb": [],
                     "metadata": {
                         'replication-method': 'LOG_BASED',
-                        'tap-mongodb.expression': 'Comment, Absolute, Name[1].Comment, Name[2].TestField.Comment', # `expression` field for reserve word.
+                        'tap-dynamodb.expression': "{\"#c\": \"Comment\", \"#tf\": \"TestField\", \"#n\": \"Name\", \"#a\": \"Absolute\"}", # `expression` field for reserve word.
                         'tap-mongodb.projection': table_configs[0]['ProjectionExpression']
                     }
                 }
