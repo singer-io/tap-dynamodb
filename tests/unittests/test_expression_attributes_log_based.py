@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch
-from tap_dynamodb.sync_strategies.log_based import sync, sync_shard
+from tap_dynamodb.sync_strategies.log_based import sync
 
 CONFIG = {
     "start_date": "2017-01-01",
@@ -18,18 +18,26 @@ STREAM = {
 }
 class MockClient():
     def scan(self, **kwargs):
+        '''Mock the scan() function of the client.'''
         return kwargs
 
     def describe_table(self, **kwargs):
+        '''Mock the describe_table() function of the client.'''
         return {'Table': {'LatestStreamArn': 'dummy_arn'}}
 
     def describe_stream(self, **kwargs):
+        '''Mock the describe stream function of the client.'''
         return {'StreamDescription': {'Shards': [{'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}]}}
+
+    def get_shard_iterator(self, **kwargs):
+        '''Mock the get_shard_iterator() of the client.'''
+        return {'ShardIterator': {}}
 
 class MockDeserializer():
     def __init__(self):
         return {}
 
+client = MockClient()
 @patch('singer.metadata.to_map', return_value = {})
 @patch('singer.write_state', return_value = {})
 @patch('singer.write_bookmark', return_value = {})
@@ -44,7 +52,6 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_with_single_expression(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test expression attribute for single reserve word passed in `expression` field."""
-        client = MockClient()
         mock_client.return_value = client
         mock_stream_client.return_value = client
         res = sync(CONFIG, STATE, STREAM)
@@ -58,7 +65,6 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_with_multiple_expression(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test expression attribute for multiple reserve words passed in `expression` field."""
-        client = MockClient()
         mock_client.return_value = client
         mock_stream_client.return_value = client
         res = sync(CONFIG, STATE, STREAM)
@@ -71,8 +77,7 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
     @patch('tap_dynamodb.dynamodb.get_stream_client')
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_without_expression(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
-        """Test expression attribute with empty string passed in `expression` field."""
-        client = MockClient()
+        """Test expression attribute with empty string passed in `expression` field."""   
         mock_client.return_value = client
         mock_stream_client.return_value = client
         res = sync(CONFIG, STATE, STREAM)
@@ -85,8 +90,7 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
     @patch('tap_dynamodb.dynamodb.get_stream_client')
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_without_projection(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
-        """Test expression attribute with empty string passed in `projection` field."""
-        client = MockClient()
+        """Test expression attribute with empty string passed in `projection` field."""  
         mock_client.return_value = client
         mock_stream_client.return_value = client
         res = sync(CONFIG, STATE, STREAM)
@@ -100,7 +104,6 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_with_nested_expr_with_dict_and_list(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test expression attribute for nested reserved words with dictionary and list passed in `expression` field."""
-        client = MockClient()
         mock_client.return_value = client
         mock_stream_client.return_value = client
         res = sync(CONFIG, STATE, STREAM)
@@ -114,7 +117,6 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_with_nested_expr_with_list(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test expression attribute for reserve words with list passed in `expression` field."""
-        client = MockClient()
         mock_client.return_value = client
         mock_stream_client.return_value = client
         res = sync(CONFIG, STATE, STREAM)
@@ -128,7 +130,6 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_with_nested_expr_with_nested_dict(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test expression attribute for nested reserved words with nested dictionary passed in `expression` field."""
-        client = MockClient()
         mock_client.return_value = client
         mock_stream_client.return_value = client
         res = sync(CONFIG, STATE, STREAM)
@@ -142,9 +143,30 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_with_special_character_in_field_name(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test expression attribute for `.` in projection field passed in `expression` field."""
-        client = MockClient()
         mock_client.return_value = client
         mock_stream_client.return_value = client
         res = sync(CONFIG, STATE, STREAM)
         
         mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['test1', 'field'], ['test1.field']], {}, 'GoogleDocs', {}, {})
+
+    @patch('singer.metadata.get', side_effect =["#cmt", "{\"#cmt\": \"Comment\"}"])
+    @patch('tap_dynamodb.sync_strategies.log_based.prepare_projection', return_value = 1)
+    @patch('tap_dynamodb.dynamodb.get_client')
+    @patch('tap_dynamodb.dynamodb.get_stream_client')
+    def test_prepare_projections_called_when_expressions_exist(self, mock_stream_client, mock_client, mock_prepare_projection, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
+        """Test that the prepare_projection() is called with the correct values when expression is passed in the catalog."""
+        mock_client.return_value = client
+        mock_stream_client.return_value = client
+        res = sync(CONFIG, STATE, STREAM)
+        mock_prepare_projection.assert_called_with(['#cmt'], '{"#cmt": "Comment"}')
+
+    @patch('singer.metadata.get', side_effect =["#cmt", ""])
+    @patch('tap_dynamodb.sync_strategies.log_based.prepare_projection', return_value = 1)
+    @patch('tap_dynamodb.dynamodb.get_client')
+    @patch('tap_dynamodb.dynamodb.get_stream_client')
+    def test_prepare_projections_called_when_null_expressions(self, mock_stream_client, mock_client, mock_prepare_projection, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
+        """Test that the prepare_projection() is not called when expression attributes are not passed in the catalog."""
+        mock_client.return_value = client
+        mock_stream_client.return_value = client
+        res = sync(CONFIG, STATE, STREAM)
+        self.assertEqual(mock_prepare_projection.call_count, 0)
