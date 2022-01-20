@@ -15,7 +15,8 @@ STREAM = {
     "table_name": "GoogleDocs",
     "stream": "GoogleDocs",
     "tap_stream_id": "GoogleDocs",
-    "metadata": []
+    "metadata": [],
+    "schema": []
 }
 class MockClient():
     def scan(self, **kwargs):
@@ -185,7 +186,7 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
         res = sync(CONFIG, STATE, STREAM)
         self.assertEqual(mock_prepare_projection.call_count, 0)
 
-    @patch('singer.metadata.get', side_effect = ["#c, Sheet", "{\"#c\":, \"Comment\"}"])
+    @patch('singer.metadata.get', side_effect = ["{\"#c\":, \"Comment\"}"])
     @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
     @patch('tap_dynamodb.dynamodb.get_client')
     @patch('tap_dynamodb.dynamodb.get_stream_client')
@@ -199,6 +200,21 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
         except Exception as e:
             expected_error_message = "Invalid JSON format. The expression attributes should contain a valid JSON format."
             self.assertEqual(str(e), expected_error_message)
+
+    @patch('singer.metadata.get', side_effect = ["", "FULL_TABLE", "", "Test", ""])
+    @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
+    @patch('tap_dynamodb.sync.clear_state_on_replication_change')
+    @patch('singer.set_currently_syncing')
+    @patch('tap_dynamodb.dynamodb.get_client')
+    @patch('tap_dynamodb.dynamodb.get_stream_client')
+    @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
+    @patch('json.loads')
+    def test_sync_stream_with_empty_expression(self, mock_loads, mock_deserializer, mock_stream_client, mock_client,  mock_currently_sync, mock_clear_state, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
+        """Test for empty value in expression does not call json.loads()."""
+        mock_client.return_value = client
+        mock_stream_client.return_value = client
+        res = sync_stream(CONFIG, STATE, STREAM)
+        self.assertEqual(mock_loads.call_count, 0)
 
 class TestPrepareProjection(unittest.TestCase):
     def test_prepare_projection_output(self):
