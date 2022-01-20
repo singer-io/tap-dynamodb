@@ -113,10 +113,38 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
     @patch('tap_dynamodb.dynamodb.get_stream_client')
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_with_nested_expr_with_list(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
-        """Test expression attribute for nested reserve words with list passed in `expression` field."""
+        """Test expression attribute for reserve words with list passed in `expression` field."""
         client = MockClient()
         mock_client.return_value = client
         mock_stream_client.return_value = client
         res = sync(CONFIG, STATE, STREAM)
         
         mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['test1[4]'], ['Test']], {}, 'GoogleDocs', {}, {})
+
+    @patch('singer.metadata.get', side_effect =["#tst.#n.#a", "{\"#tst\": \"test1\", \"#n\": \"Name\", \"#a\": \"Age\"}"])
+    @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
+    @patch('tap_dynamodb.dynamodb.get_client')
+    @patch('tap_dynamodb.dynamodb.get_stream_client')
+    @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
+    def test_sync_with_nested_expr_with_nested_dict(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
+        """Test expression attribute for nested reserved words with nested dictionary passed in `expression` field."""
+        client = MockClient()
+        mock_client.return_value = client
+        mock_stream_client.return_value = client
+        res = sync(CONFIG, STATE, STREAM)
+        
+        mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['test1', 'Name', 'Age']], {}, 'GoogleDocs', {}, {})
+
+    @patch('singer.metadata.get', side_effect =["#tst.#f, #tf", "{\"#tst\": \"test1\", \"#f\": \"field\", \"#tf\": \"test1.field\"}"])
+    @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
+    @patch('tap_dynamodb.dynamodb.get_client')
+    @patch('tap_dynamodb.dynamodb.get_stream_client')
+    @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
+    def test_sync_with_special_character_in_field_name(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
+        """Test expression attribute for `.` in projection field passed in `expression` field."""
+        client = MockClient()
+        mock_client.return_value = client
+        mock_stream_client.return_value = client
+        res = sync(CONFIG, STATE, STREAM)
+        
+        mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['test1', 'field'], ['test1.field']], {}, 'GoogleDocs', {}, {})
