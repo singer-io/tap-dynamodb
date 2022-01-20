@@ -130,13 +130,19 @@ def prepare_projection(projection, expression):
     '''
     expression = json.loads(expression)
     return_projection = copy.deepcopy(projection)
+    # iterating over the expressions dict
     for key, value in expression.items():
-        for index, element in enumerate(projection):
+        # iterating over the projections list
+        for proj_index, element in enumerate(projection):
             if element == key:
-                return_projection[index] = value
-            if '[' in element and key in element:
-                # replace the value with the key of expression attributes
-                return_projection[index] = return_projection[index].replace(key, value)
+                return_projection[proj_index] = value
+            if '[' in element:
+                # split exactly one time by `[`
+                split_portion = element.split('[', 1)
+                # check if the zeroth position is key and replace
+                if split_portion[0] == key:
+                    # replace the value with the key of expression attributes
+                    return_projection[proj_index] = return_projection[proj_index].replace(key, value)
     return return_projection
 
 

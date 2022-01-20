@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
-from tap_dynamodb.sync_strategies.log_based import sync
+from tap_dynamodb.sync_strategies.log_based import sync, prepare_projection
+from tap_dynamodb.sync import sync_stream
 
 CONFIG = {
     "start_date": "2017-01-01",
@@ -42,8 +43,8 @@ client = MockClient()
 @patch('singer.write_state', return_value = {})
 @patch('singer.write_bookmark', return_value = {})
 @patch('singer.get_bookmark', return_value = {})
-class TestExpressionAttributesInFullTable(unittest.TestCase):
-    """Test expression attributes for reserved word in full table sync. Mocked some method of singer package"""
+class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
+    """Test expression attributes for reserved word in log_based sync. Mocked some method of singer package"""
 
     @patch('singer.metadata.get', side_effect = ["#c, Sheet", "{\"#c\": \"Comment\"}"])
     @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
@@ -149,6 +150,19 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         
         mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['test1', 'field'], ['test1.field']], {}, 'GoogleDocs', {}, {})
 
+    @patch('singer.metadata.get', side_effect =["#test, #t[1].#n", "{\"#t\": \"test1\", \"#n\": \"Name\", \"#test\": \"test\"}"])
+    @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
+    @patch('tap_dynamodb.dynamodb.get_client')
+    @patch('tap_dynamodb.dynamodb.get_stream_client')
+    @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
+    def test_sync_for_different_order_in_projections(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
+        """Test expression attribute for `.` in projection field passed in `expression` field."""
+        mock_client.return_value = client
+        mock_stream_client.return_value = client
+        res = sync(CONFIG, STATE, STREAM)
+        
+        mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['test'], ['test1[1]', 'Name']], {}, 'GoogleDocs', {}, {})
+
     @patch('singer.metadata.get', side_effect =["#cmt", "{\"#cmt\": \"Comment\"}"])
     @patch('tap_dynamodb.sync_strategies.log_based.prepare_projection', return_value = 1)
     @patch('tap_dynamodb.dynamodb.get_client')
@@ -170,3 +184,27 @@ class TestExpressionAttributesInFullTable(unittest.TestCase):
         mock_stream_client.return_value = client
         res = sync(CONFIG, STATE, STREAM)
         self.assertEqual(mock_prepare_projection.call_count, 0)
+
+    @patch('singer.metadata.get', side_effect = ["#c, Sheet", "{\"#c\":, \"Comment\"}"])
+    @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
+    @patch('tap_dynamodb.dynamodb.get_client')
+    @patch('tap_dynamodb.dynamodb.get_stream_client')
+    @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
+    def test_sync_stream_with_invalid_json(self, mock_deserializer, mock_stream_client, mock_client, mock_sync_shard, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
+        """Test sync_stream raises exception with proper error message with invalid json in expression."""
+        mock_client.return_value = client
+        mock_stream_client.return_value = client
+        try:
+            res = sync_stream(CONFIG, STATE, STREAM)
+        except Exception as e:
+            expected_error_message = "Invalid JSON format. The expression attributes should contain a valid JSON format."
+            self.assertEqual(str(e), expected_error_message)
+
+class TestPrepareProjection(unittest.TestCase):
+    def test_prepare_projection_output(self):
+        """"""
+        projection = ["#tst", "#cmt"]
+        expression = "{\"#tst\": \"test\", \"#cmt\": \"Comment\"}"
+        new_projection = prepare_projection(projection, expression)
+        expected_projection = ["test", "Comment"]
+        self.assertEqual(new_projection, expected_projection)
