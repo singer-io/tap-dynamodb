@@ -21,9 +21,10 @@ class DynamoDBProjections(TestDynamoDBBase):
              'SortType': 'S',
              'generator': self.generate_items,
              'num_rows': 100,
-             # Added three extra reserve words to verify the sync to retrieve `Comment` and `Name[1].Comment`
-             'ProjectionExpression': '#n[1].#c, #n[2].#tf.#c, #c, int_id, string_field, decimal_field, int_list_field[1], map_field.map_entry_1, string_list[2], map_field.list_entry[2], list_map[1].a',
-             'top_level_keys': {'Name', 'Comment', 'int_id', 'string_field', 'decimal_field', 'int_list_field', 'map_field', 'string_list', 'list_map'},
+             # Added extra reserve words to verify the sync to retrieve `Comment` and `Name[1].Comment`
+             # and test_object.nested_field as a field and test_object.nested_field as a nested field.
+             'ProjectionExpression': '#name[1].#cmt, #name[2].#testfield.#cmt, #cmt, #tstobj.#nestf, #tobj_nested, int_id, string_field, decimal_field, int_list_field[1], map_field.map_entry_1, string_list[2], map_field.list_entry[2], list_map[1].a',
+             'top_level_keys': {'Name', 'Comment', 'test_object', 'test_object.nested_field', 'int_id', 'string_field', 'decimal_field', 'int_list_field', 'map_field', 'string_list', 'list_map'},
              'top_level_list_keys': {'int_list_field', 'string_list', 'list_map', 'Name'},
              'nested_map_keys': {'map_field': {'map_entry_1', 'list_entry'}},
              'map_projection': {'map_field': {'map_entry_1': 'map_value_1'}}
@@ -36,6 +37,8 @@ class DynamoDBProjections(TestDynamoDBBase):
             record = {
                 'Comment': 'Talend stitch',
                 'Name': ['name1', {'Comment': "Test_comment"}, {"TestField": {"Comment": "For test"}}],
+                'test_object': {"nested_field": "nested test value"},
+                'test_object.nested_field': "test value with special character", # added this field to verify the `.` in the field names works properly.
                 'int_id': i,
                 'decimal_field': decimal.Decimal(str(i) + '.00000000001'),
                 'string_field': self.random_string_generator(),
@@ -74,7 +77,7 @@ class DynamoDBProjections(TestDynamoDBBase):
             annotated_schema = menagerie.get_annotated_schema(conn_id, stream_catalog['stream_id'])
             additional_md = [{"breadcrumb" : [], "metadata" : {
                 'replication-method' : 'FULL_TABLE',
-                'tap-dynamodb.expression': "{\"#c\": \"Comment\", \"#tf\": \"TestField\", \"#n\": \"Name\"}", # `expression` field for reserve word.
+                'tap-dynamodb.expression': "{\"#cmt\": \"Comment\", \"#testfield\": \"TestField\", \"#name\": \"Name\", \"#tstobj\": \"test_object\", \"#nestf\": \"nested_field\", \"#tobj_nested\": \"test_object.nested_field\"}", # `expression` field for reserve word.
                 'tap-mongodb.projection': expected_config['ProjectionExpression']
             }}]
             connections.select_catalog_and_fields_via_metadata(conn_id,

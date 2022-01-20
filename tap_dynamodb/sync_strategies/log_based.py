@@ -124,18 +124,19 @@ def prepare_projection(projection, expression):
     projections = "#c", expressions = {"#c": "Comment"}
     return = ["Comment"]
     Example of nested expression :
-    projections = "#name[0].#age", expressions = {"#name": "Name", "#age": "Age"}
-    return = ['Name[0]', 'Age']
+    In Catalog - projections = "#n[0].#a", expressions = {"#n": "Name", "#a": "Age"}
+    projection passed in the function = ['#n[0]', '#a']
+    projection returned from the function = ['Name[0]', 'Age']
     '''
     expression = json.loads(expression)
     return_projection = copy.deepcopy(projection)
     for key, value in expression.items():
-        for ind, element in enumerate(projection):
+        for index, element in enumerate(projection):
             if element == key:
-                return_projection[ind] = value
+                return_projection[index] = value
             if '[' in element and key in element:
                 # replace the value with the key of expression attributes
-                return_projection[ind] = return_projection[ind].replace(key, value)
+                return_projection[index] = return_projection[index].replace(key, value)
     return return_projection
 
 
