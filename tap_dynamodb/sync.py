@@ -27,15 +27,6 @@ def sync_stream(config, state, stream):
 
     md_map = metadata.to_map(stream['metadata'])
 
-    # added this extra check here to catch the JSONDecodeError early.
-    try:
-        expression = metadata.get(md_map, (), 'tap-dynamodb.expression')
-        # to verify `json.loads()` is only called if expression is not None or empty
-        if expression:
-            json.loads(expression)
-    except json.decoder.JSONDecodeError:
-        raise Exception("Invalid JSON format. The expression attributes should contain a valid JSON format.")
-
     replication_method = metadata.get(md_map, (), 'replication-method')
     key_properties = metadata.get(md_map, (), 'table-key-properties')
 

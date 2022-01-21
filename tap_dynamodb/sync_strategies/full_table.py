@@ -1,5 +1,4 @@
 import time
-import json
 import singer
 from singer import metadata
 from tap_dynamodb import dynamodb

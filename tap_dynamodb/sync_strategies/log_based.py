@@ -1,6 +1,4 @@
 import datetime
-import json
-import copy
 from singer import metadata
 import singer
 
@@ -136,7 +134,7 @@ def prepare_projection(projection, expression, exp_key_traverse):
                 exp_key_traverse.discard(replaceable_part)
                 # replace the value given in the expression with the key in the projection
                 projection[i] = part.replace(replaceable_part, expression[replaceable_part])
-            else: 
+            else:
                 raise Exception("No expression is available or the given projection: {}.".format(replaceable_part))
 
 def sync(config, state, stream):
