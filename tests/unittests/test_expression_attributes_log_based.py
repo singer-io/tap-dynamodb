@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import patch
 from tap_dynamodb.sync_strategies.log_based import sync, prepare_projection
-from tap_dynamodb.sync import sync_stream
 
 CONFIG = {
     "start_date": "2017-01-01",
@@ -54,7 +53,6 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_with_single_expression(self, mock_deserializer, mock_sync_shard, mock_stream_client, mock_client, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test expression attribute for single reserve word passed in `expression` field."""
-        
         res = sync(CONFIG, STATE, STREAM)
         
         mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['Comment'], ['Sheet']], {}, 'GoogleDocs', {}, {})
@@ -118,7 +116,6 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_with_special_character_in_field_name(self, mock_deserializer, mock_sync_shard, mock_stream_client, mock_client, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test expression attribute for `.` in projection field passed in `expression` field."""
-        
         res = sync(CONFIG, STATE, STREAM)
         
         mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['test1', 'field'], ['test1.field']], {}, 'GoogleDocs', {}, {})
@@ -128,7 +125,6 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_for_different_order_in_projections(self, mock_deserializer, mock_sync_shard, mock_stream_client, mock_client, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test expression attribute for `.` in projection field passed in `expression` field."""
-        
         res = sync(CONFIG, STATE, STREAM)
         
         mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['test'], ['test1[1]', 'Name']], {}, 'GoogleDocs', {}, {})
@@ -138,7 +134,6 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_for_valid_proj_and_no_expr(self, mock_deserializer, mock_sync_shard, mock_stream_client, mock_client, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test sync should work when valid projection passed with no expressions."""
-        
         res = sync(CONFIG, STATE, STREAM)
         
         mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['Test']], {}, 'GoogleDocs', {}, {})
@@ -148,7 +143,6 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_for_expr_not_in_proj(self, mock_deserializer, mock_sync_shard, mock_stream_client, mock_client, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
         """Test expression attribute for `.` in projection field passed in `expression` field."""
-        
         try:
             res = sync(CONFIG, STATE, STREAM)
         except Exception as e:
