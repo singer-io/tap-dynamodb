@@ -126,16 +126,16 @@ def prepare_projection(projection, expression, exp_key_traverse):
     projection passed in the function = ['#n[0]', '#a']
     projection returned from the function = ['Name[0]', 'Age']
     '''
-    for i, part in enumerate(projection):
+    for index, part in enumerate(projection):
         if '#' in part:
             replaceable_part = part.split('[', 1)[0] if '[' in part else part
             # check if the projection placeholder is defined in the expression else raise an exception
             if replaceable_part in expression:
                 exp_key_traverse.discard(replaceable_part)
                 # replace the value given in the expression with the key in the projection
-                projection[i] = part.replace(replaceable_part, expression[replaceable_part])
+                projection[index] = part.replace(replaceable_part, expression[replaceable_part])
             else:
-                raise Exception("No expression is available or the given projection: {}.".format(replaceable_part))
+                raise Exception("No expression is available for the given projection: {}.".format(replaceable_part))
 
 def sync(config, state, stream):
     table_name = stream['tap_stream_id']
@@ -157,6 +157,7 @@ def sync(config, state, stream):
                 if not expr[0].startswith("#"):
                     raise Exception("Expression key '{}' must start with '#'.".format(expr))
 
+            # a set to check the expression keys are used in the projections.
             exp_key_traverse = set(expression.keys())
 
             for proj in projection:

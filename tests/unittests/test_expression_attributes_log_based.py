@@ -124,7 +124,7 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
     @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_for_different_order_in_projections(self, mock_deserializer, mock_sync_shard, mock_stream_client, mock_client, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
-        """Test expression attribute for `.` in projection field passed in `expression` field."""
+        """Test expression attribute to check different order in projection and expression field."""
         res = sync(CONFIG, STATE, STREAM)
         
         mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['test'], ['test1[1]', 'Name']], {}, 'GoogleDocs', {}, {})
@@ -142,7 +142,7 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
     @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_for_expr_not_in_proj(self, mock_deserializer, mock_sync_shard, mock_stream_client, mock_client, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
-        """Test expression attribute for `.` in projection field passed in `expression` field."""
+        """Test sync for expression keys not in projection field."""
         try:
             res = sync(CONFIG, STATE, STREAM)
         except Exception as e:
@@ -153,7 +153,7 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
     @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_for_expr_key_without_hash(self, mock_deserializer, mock_sync_shard, mock_stream_client, mock_client, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
-        """Test expression attribute for `.` in projection field passed in `expression` field."""
+        """Test sync for expression key defined without `#` field."""
         try:
             res = sync(CONFIG, STATE, STREAM)
         except Exception as e:
@@ -164,11 +164,11 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
     @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
     @patch('tap_dynamodb.deserialize.Deserializer', return_value = {})
     def test_sync_for_proj_not_in_expr(self, mock_deserializer, mock_sync_shard, mock_stream_client, mock_client, mock_metadata_get, mock_get_bookmark, mock_write_bookmark, mock_write_state, mock_to_map):
-        """Test expression attribute for `.` in projection field passed in `expression` field."""
+        """Test sync for projection key defined with # but not in expression field."""
         try:
             res = sync(CONFIG, STATE, STREAM)
         except Exception as e:
-            expected_error_message = "No expression is available or the given projection: #c."
+            expected_error_message = "No expression is available for the given projection: #c."
             self.assertEqual(str(e), expected_error_message)
 
     @patch('singer.metadata.get', side_effect =["#cmt", ""])
@@ -210,3 +210,14 @@ class TestPrepareProjection(unittest.TestCase):
         prepare_projection(projection, expression, exp_keys)
         expected_projection = ["test", "Comment"]
         self.assertEqual(projection, expected_projection)
+
+    def test_prepare_projection_for_proj_not_in_expr(self):
+        """Test that the prepare_projection() throws an error for projection value not in expression."""
+        proj  = ["#tst", "#cmt"]
+        expr = {"#tst": "Test"}
+        expr_keys = {"#tst", "#cmt"}
+        try:
+            prepare_projection(proj, expr, expr_keys)
+        except Exception as e:
+            expected_err_msg = "No expression is available for the given projection: #cmt."
+            self.assertEqual(str(e), expected_err_msg)
