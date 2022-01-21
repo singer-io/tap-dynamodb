@@ -18,7 +18,7 @@ def scan_table(table_name, projection, expression, last_evaluated_key, config):
         scan_params['ProjectionExpression'] = projection
     if expression:
         # Add `ExpressionAttributeNames` parameter for reserved word.
-        scan_params['ExpressionAttributeNames'] = json.loads(expression)
+        scan_params['ExpressionAttributeNames'] = dynamodb.decode_expression(expression)
     if last_evaluated_key is not None:
         scan_params['ExclusiveStartKey'] = last_evaluated_key
 

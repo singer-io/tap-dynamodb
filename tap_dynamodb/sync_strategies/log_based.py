@@ -117,7 +117,7 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
     singer.write_state(state)
     return rows_synced
 
-def prepare_projection(projection, expression):
+def prepare_projection(projection, expression, exp_key_traverse):
     '''
     Prepare the projection based on the expression attributes
     For example:
@@ -128,23 +128,16 @@ def prepare_projection(projection, expression):
     projection passed in the function = ['#n[0]', '#a']
     projection returned from the function = ['Name[0]', 'Age']
     '''
-    expression = json.loads(expression)
-    return_projection = copy.deepcopy(projection)
-    # iterating over the expressions dict
-    for key, value in expression.items():
-        # iterating over the projections list
-        for proj_index, element in enumerate(projection):
-            if element == key:
-                return_projection[proj_index] = value
-            if '[' in element:
-                # split exactly one time by `[`
-                split_portion = element.split('[', 1)
-                # check if the zeroth position is key and replace
-                if split_portion[0] == key:
-                    # replace the value with the key of expression attributes
-                    return_projection[proj_index] = return_projection[proj_index].replace(key, value)
-    return return_projection
-
+    for i, part in enumerate(projection):
+        if '#' in part:
+            replaceable_part = part.split('[', 1)[0] if '[' in part else part
+            # check if the projection placeholder is defined in the expression else raise an exception
+            if replaceable_part in expression:
+                exp_key_traverse.discard(replaceable_part)
+                # replace the value given in the expression with the key in the projection
+                projection[i] = part.replace(replaceable_part, expression[replaceable_part])
+            else: 
+                raise Exception("No expression is available or the given projection: {}.".format(replaceable_part))
 
 def sync(config, state, stream):
     table_name = stream['tap_stream_id']
@@ -158,9 +151,21 @@ def sync(config, state, stream):
     if projection is not None:
         projection = [x.strip().split('.') for x in projection.split(',')]
         if expression:
-            for index, each in enumerate(projection):
-                projection[index] = prepare_projection(each, expression)
+            # decode the expression in jsonified object.
+            expression = dynamodb.decode_expression(expression)
+            # loop over the expression keys
+            for expr in expression.keys():
+                # check if the expression key starts with `#` and if not raise an exception
+                if not expr[0].startswith("#"):
+                    raise Exception("Expression key '{}' must start with '#'.".format(expr))
 
+            exp_key_traverse = set(expression.keys())
+
+            for proj in projection:
+                prepare_projection(proj, expression, exp_key_traverse)
+
+            if exp_key_traverse:
+                raise Exception("No projection is available for the expression keys: {}.".format(exp_key_traverse))
     # Write activate version message
     stream_version = singer.get_bookmark(state, table_name, 'version')
     singer.write_version(table_name, stream_version)
