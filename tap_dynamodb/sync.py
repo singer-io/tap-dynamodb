@@ -1,4 +1,3 @@
-import json
 from singer import metadata
 import singer
 from tap_dynamodb.sync_strategies import log_based
