@@ -1,5 +1,5 @@
-import backoff
 import json
+import backoff
 import boto3
 import singer
 
