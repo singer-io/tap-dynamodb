@@ -157,7 +157,7 @@ def sync(config, state, stream):
                 if not expr[0].startswith("#"):
                     raise Exception("Expression key '{}' must start with '#'.".format(expr))
 
-            # a set to check the expression keys are used in the projections.
+            # A set to check all the expression keys are used in the projections or not.
             exp_key_traverse = set(expression.keys())
 
             for proj in projection:
