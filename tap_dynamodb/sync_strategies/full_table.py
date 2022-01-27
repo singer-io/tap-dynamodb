@@ -12,7 +12,6 @@ def scan_table(table_name, projection, expression, last_evaluated_key, config):
         'TableName': table_name,
         'Limit': 1000
     }
-    import ipdb;ipdb.set_trace()
     if projection is not None and projection != '':
         scan_params['ProjectionExpression'] = projection
     if expression:
@@ -71,7 +70,6 @@ def sync(config, state, stream):
                                              'last_evaluated_key')
 
     md_map = metadata.to_map(stream['metadata'])
-    import ipdb;ipdb.set_trace()
     projection = metadata.get(md_map, (), 'tap-mongodb.projection')
 
     # An expression attribute name is a placeholder that one uses in an Amazon DynamoDB expression as an alternative to an actual attribute name.
