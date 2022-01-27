@@ -46,7 +46,9 @@ workflows:
   commit:
     jobs:
       - build:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tap-tester-user
   build_daily:
     triggers:
       - schedule:
@@ -57,4 +59,6 @@ workflows:
                 - master
     jobs:
       - build:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tap-tester-user
