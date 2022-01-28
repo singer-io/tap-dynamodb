@@ -1,4 +1,3 @@
-import decimal
 import singer
 
 from boto3.dynamodb.types import TypeSerializer
@@ -30,7 +29,8 @@ class DynamoDBLogBasedPrimaryAndHashKeyReservedWords(TestDynamoDBBase):
             }
         ]
 
-    def generate_simple_items_4(self, num_items, start_key=0):
+    @staticmethod
+    def generate_simple_items_4(num_items, start_key=0):
         '''Generate unique records for the table.'''
         serializer = TypeSerializer()
         for i in range(start_key, start_key + num_items):
