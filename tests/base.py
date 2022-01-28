@@ -15,6 +15,7 @@ ALL_TABLE_NAMES_TO_CLEAR = frozenset({
     'simple_table_1',
     'simple_table_2',
     'simple_table_3',
+    'simple_table_4',
     'com-stitchdata-test-dynamodb-integration-simple_table_1',
 })
 
