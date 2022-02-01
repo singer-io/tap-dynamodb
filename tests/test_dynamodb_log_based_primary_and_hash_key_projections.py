@@ -56,7 +56,7 @@ class DynamoDBLogBasedPrimaryAndHashKeyReservedWords(TestDynamoDBBase):
                     "breadcrumb": [],
                     "metadata": {
                         'replication-method': 'LOG_BASED',
-                        'tap-dynamodb.expression': "{\"#cmt\": \"Comment\", \"#name\": \"Name\"}", # `expression` field for reserve word.
+                        'tap-dynamodb.expression-attribute': "{\"#cmt\": \"Comment\", \"#name\": \"Name\"}", # `expression` field for reserve word.
                         'tap-mongodb.projection': table_configs[0]['ProjectionExpression']
                     }
                 }
