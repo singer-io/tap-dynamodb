@@ -65,7 +65,7 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
 
     @staticmethod
     def name():
-        return "tap_tester_dynamodb_log_based_projections"
+        return "tt_dynamodb_log_projections"
 
     def test_run(self):
         (table_configs, conn_id, expected_streams) = self.pre_sync_test()
