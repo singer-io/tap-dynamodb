@@ -42,7 +42,7 @@ class DynamoDBLogBasedPrimaryAndHashKeyReservedWords(TestDynamoDBBase):
 
     @staticmethod
     def name():
-        return "tap_tester_dynamodb_log_based_primary_and_hash_key_projections"
+        return "tt_dynamodb_log_pkhk_projections"
 
     def test_run(self):
         (table_configs, conn_id, expected_streams) = self.pre_sync_test()
@@ -56,7 +56,7 @@ class DynamoDBLogBasedPrimaryAndHashKeyReservedWords(TestDynamoDBBase):
                     "breadcrumb": [],
                     "metadata": {
                         'replication-method': 'LOG_BASED',
-                        'tap-dynamodb.expression': "{\"#cmt\": \"Comment\", \"#name\": \"Name\"}", # `expression` field for reserve word.
+                        'tap-dynamodb.expression-attributes': "{\"#cmt\": \"Comment\", \"#name\": \"Name\"}", # `expression` field for reserve word.
                         'tap-mongodb.projection': table_configs[0]['ProjectionExpression']
                     }
                 }
