@@ -42,7 +42,7 @@ class DynamoDBFullTablePrimaryAndHashKeyReservedWords(TestDynamoDBBase):
 
     @staticmethod
     def name():
-        return "tap_tester_dynamodb_full_table_primary_and_hash_key_projections"
+        return "tt_dynamodb_ft_pkhk_projections"
 
     def test_run(self):
         (table_configs, conn_id, _) = self.pre_sync_test()
@@ -54,7 +54,7 @@ class DynamoDBFullTablePrimaryAndHashKeyReservedWords(TestDynamoDBBase):
             annotated_schema = menagerie.get_annotated_schema(conn_id, stream_catalog['stream_id'])
             additional_md = [{"breadcrumb" : [], "metadata" : {
                 'replication-method' : 'FULL_TABLE',
-                'tap-dynamodb.expression': "{\"#cmt\": \"Comment\", \"#name\": \"Name\"}", # `expression` field for reserve word.
+                'tap-dynamodb.expression-attributes': "{\"#cmt\": \"Comment\", \"#name\": \"Name\"}", # `expression` field for reserve word.
                 'tap-mongodb.projection': expected_config['ProjectionExpression']
             }}]
             connections.select_catalog_and_fields_via_metadata(conn_id,
