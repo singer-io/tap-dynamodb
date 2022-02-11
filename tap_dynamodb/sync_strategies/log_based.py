@@ -1,15 +1,16 @@
 import datetime
 from singer import metadata
 import singer
-
-from tap_dynamodb import dynamodb
-from tap_dynamodb import deserialize
+import backoff
+from botocore.exceptions import ConnectTimeoutError, ReadTimeoutError
+from tap_dynamodb import dynamodb, deserialize
 
 LOGGER = singer.get_logger()
 WRITE_STATE_PERIOD = 1000
 
 SDC_DELETED_AT = "_sdc_deleted_at"
-
+MAX_TRIES = 5
+FACTOR = 2
 
 def get_shards(streams_client, stream_arn):
     '''
@@ -137,6 +138,11 @@ def prepare_projection(projection, expression, exp_key_traverse):
             else:
                 raise Exception("No expression is available for the given projection: {}.".format(replaceable_part))
 
+# Backoff for both ReadTimeout and ConnectTimeout error for 5 times
+@backoff.on_exception(backoff.expo,
+                      (ReadTimeoutError, ConnectTimeoutError),
+                      max_tries=MAX_TRIES,
+                      factor=FACTOR)
 def sync(config, state, stream):
     table_name = stream['tap_stream_id']
 
@@ -250,7 +256,11 @@ def has_stream_aged_out(state, table_name):
     # stream then we consider the stream to be aged out
     return time_span > datetime.timedelta(hours=19, minutes=30)
 
-
+# Backoff for both ReadTimeout and ConnectTimeout error for 5 times
+@backoff.on_exception(backoff.expo,
+                      (ReadTimeoutError, ConnectTimeoutError),
+                      max_tries=MAX_TRIES,
+                      factor=FACTOR)
 def get_initial_bookmarks(config, state, table_name):
     '''
     Returns the state including all bookmarks necessary for the initial

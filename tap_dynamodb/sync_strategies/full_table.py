@@ -1,8 +1,10 @@
 import time
 import singer
 from singer import metadata
-from tap_dynamodb import dynamodb
+import backoff
+from botocore.exceptions import ConnectTimeoutError, ReadTimeoutError
 from tap_dynamodb.deserialize import Deserializer
+from tap_dynamodb import dynamodb
 
 LOGGER = singer.get_logger()
 
@@ -36,7 +38,11 @@ def scan_table(table_name, projection, expression, last_evaluated_key, config):
 
         has_more = result.get('LastEvaluatedKey', False)
 
-
+# Backoff for both ReadTimeout and ConnectTimeout error for 5 times
+@backoff.on_exception(backoff.expo,
+                      (ReadTimeoutError, ConnectTimeoutError),
+                      max_tries=5,
+                      factor=2)
 def sync(config, state, stream):
     table_name = stream['tap_stream_id']
 
