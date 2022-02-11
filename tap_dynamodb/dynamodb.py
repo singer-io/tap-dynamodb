@@ -8,14 +8,16 @@ from botocore.credentials import (
     DeferredRefreshableCredentials,
     JSONFileCache
 )
-from botocore.exceptions import ClientError
 from botocore.session import Session
+from botocore.config import Config
+from botocore.exceptions import ClientError, ConnectTimeoutError, ReadTimeoutError
 
 LOGGER = singer.get_logger()
+REQUEST_TIMEOUT = 300
 
 def retry_pattern():
     return backoff.on_exception(backoff.expo,
-                                ClientError,
+                                (ClientError, ConnectTimeoutError, ReadTimeoutError),
                                 max_tries=5,
                                 on_backoff=log_backoff_attempt,
                                 factor=10)
@@ -65,17 +67,42 @@ def setup_aws_client(config):
     LOGGER.info("Attempting to assume_role on RoleArn: %s", role_arn)
     boto3.setup_default_session(botocore_session=refreshable_session)
 
+def get_request_timeout(config):
+    # if request_timeout is other than 0,"0" or "" then use request_timeout
+    request_timeout = config.get('request_timeout')
+    if request_timeout and float(request_timeout):
+        request_timeout = float(request_timeout)
+    else: # If value is 0,"0" or "" then set default to 300 seconds.
+        request_timeout = REQUEST_TIMEOUT
+    return request_timeout
+
 def get_client(config):
+    # get the request_timeout
+    request_timeout = get_request_timeout(config)
+    # add the request_timeout in both connect_timeout as well as read_timeout
+    timeout_config = Config(connect_timeout=request_timeout, read_timeout=request_timeout)
     if config.get('use_local_dynamo'):
         return boto3.client('dynamodb',
                             endpoint_url='http://localhost:8000',
-                            region_name=config['region_name'])
-    return boto3.client('dynamodb', config['region_name'])
+                            region_name=config['region_name'],
+                            config=timeout_config   # pass the config to add the request_timeout
+                            )
+    return boto3.client('dynamodb', config['region_name'],
+                        config=timeout_config   # pass the config to add the request_timeout
+                        )
 
 def get_stream_client(config):
+    # get the request_timeout
+    request_timeout = get_request_timeout(config)
+    # add the request_timeout in both connect_timeout as well as read_timeout
+    timeout_config = Config(connect_timeout=request_timeout,  read_timeout=request_timeout)
     if config.get('use_local_dynamo'):
         return boto3.client('dynamodbstreams',
                             endpoint_url='http://localhost:8000',
-                            region_name=config['region_name'])
+                            region_name=config['region_name'],
+                            config=timeout_config   # pass the config to add the request_timeout
+                            )
     return boto3.client('dynamodbstreams',
-                        region_name=config['region_name'])
+                        region_name=config['region_name'],
+                        config=timeout_config   # pass the config to add the request_timeout
+                        )
