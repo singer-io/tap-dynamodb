@@ -91,6 +91,8 @@ class DynamoDBLogBasedParentChildData(TestDynamoDBBase):
         for stream in expected_streams:
             messages = messages_by_stream.get(stream).get('messages')
             records = [message.get('data') for message in messages if message.get('action') == 'upsert']
+            # verify that we replicated records
+            self.assertTrue(len(records) > 0)
             for record in records:
 
                 # verify that we get 'None' for child data when parent data is not found
