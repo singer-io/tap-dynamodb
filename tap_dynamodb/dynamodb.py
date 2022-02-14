@@ -1,3 +1,4 @@
+import json
 import backoff
 import boto3
 import singer
@@ -121,3 +122,10 @@ def get_stream_client(config):
                         region_name=config['region_name'],
                         config=timeout_config   # pass the config to add the request_timeout
                         )
+
+def decode_expression(expression):
+    '''Convert the string into JSON object and raise an exception if invalid JSON format'''
+    try:
+        return json.loads(expression)
+    except json.decoder.JSONDecodeError:
+        raise Exception("Invalid JSON format. The expression attributes should contain a valid JSON format.")

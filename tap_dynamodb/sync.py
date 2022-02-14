@@ -25,6 +25,7 @@ def sync_stream(config, state, stream):
     table_name = stream['tap_stream_id']
 
     md_map = metadata.to_map(stream['metadata'])
+
     replication_method = metadata.get(md_map, (), 'replication-method')
     key_properties = metadata.get(md_map, (), 'table-key-properties')
 

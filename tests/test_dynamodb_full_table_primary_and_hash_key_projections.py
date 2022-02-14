@@ -1,4 +1,3 @@
-import decimal
 import singer
 
 from boto3.dynamodb.types import TypeSerializer
@@ -11,61 +10,39 @@ from base import TestDynamoDBBase
 LOGGER = singer.get_logger()
 
 
-class DynamoDBProjections(TestDynamoDBBase):
+class DynamoDBFullTablePrimaryAndHashKeyReservedWords(TestDynamoDBBase):
     def expected_table_config(self):
         return [
-            {'TableName': 'simple_table_1',
-             'HashKey': 'int_id',
-             'HashType': 'N',
-             'SortKey': 'string_field',
-             'SortType': 'S',
-             'generator': self.generate_items,
-             'num_rows': 100,
-             # Added extra reserve words to verify the sync to retrieve `Comment` and `Name[1].Comment`
-             # and test_object.nested_field as a field and test_object.nested_field as a nested field.
-             'ProjectionExpression': '#name[1].#cmt, #name[2].#testfield.#cmt, #cmt, #tstobj.#nestf, #tobj_nested, int_id, string_field, decimal_field, int_list_field[1], map_field.map_entry_1, string_list[2], map_field.list_entry[2], list_map[1].a',
-             'top_level_keys': {'Name', 'Comment', 'test_object', 'test_object.nested_field', 'int_id', 'string_field', 'decimal_field', 'int_list_field', 'map_field', 'string_list', 'list_map'},
-             'top_level_list_keys': {'int_list_field', 'string_list', 'list_map', 'Name'},
-             'nested_map_keys': {'map_field': {'map_entry_1', 'list_entry'}},
-             'map_projection': {'map_field': {'map_entry_1': 'map_value_1'}}
-            },
+            {
+                'TableName': 'simple_table_4',
+                # Added the `Comment` which is a reserved word as the primary key (HashKey) to verify the expression attributes works for them
+                'HashKey': 'Comment',
+                'HashType': 'N',
+                # Added the `Name` which is a reserved word as the replication key (SortKey) to verify the expression attributes works for them
+                'SortKey': 'Name',
+                'SortType': 'S',
+                'generator': self.generate_simple_items_4,
+                'num_rows': 100,
+                'ProjectionExpression': '#cmt, #name',
+                'top_level_keys': {'Name', 'Comment'}
+            }
         ]
 
-    def generate_items(self, num_items):
+    @staticmethod
+    def generate_simple_items_4(num_items, start_key=0):
+        '''Generate unique records for the table.'''
         serializer = TypeSerializer()
-        for i in range(num_items):
+        for i in range(start_key, start_key + num_items):
             record = {
-                'Comment': 'Talend stitch',
-                'Name': ['name1', {'Comment': "Test_comment"}, {"TestField": {"Comment": "For test"}}],
-                'test_object': {"nested_field": "nested test value"},
-                'test_object.nested_field': "test value with special character", # added this field to verify the `.` in the field names works properly.
-                'int_id': i,
-                'decimal_field': decimal.Decimal(str(i) + '.00000000001'),
-                'string_field': self.random_string_generator(),
-                'byte_field': b'some_bytes',
-                'int_list_field': [i, i+1, i+2],
-                'int_set_field': set([i, i+1, i+2]),
-                'map_field': {
-                    'map_entry_1': 'map_value_1',
-                    'map_entry_2': 'map_value_2',
-                    'list_entry': [i, i+1, i+2]
-                },
-                'list_map': [
-                    {'a': 1,
-                     'b': 2},
-                    {'a': 100,
-                     'b': 200}
-                ],
-                'string_list': [self.random_string_generator(), self.random_string_generator(), self.random_string_generator()],
+                'Comment': i,
+                'Name': 'Test Name' + str(i),
                 'boolean_field': True,
-                'other_boolean_field': False,
-                'null_field': None
             }
             yield serializer.serialize(record)
 
     @staticmethod
     def name():
-        return "tap_tester_dynamodb_projections"
+        return "tt_dynamodb_ft_pkhk_projections"
 
     def test_run(self):
         (table_configs, conn_id, _) = self.pre_sync_test()
@@ -77,7 +54,7 @@ class DynamoDBProjections(TestDynamoDBBase):
             annotated_schema = menagerie.get_annotated_schema(conn_id, stream_catalog['stream_id'])
             additional_md = [{"breadcrumb" : [], "metadata" : {
                 'replication-method' : 'FULL_TABLE',
-                'tap-dynamodb.expression-attributes': "{\"#cmt\": \"Comment\", \"#testfield\": \"TestField\", \"#name\": \"Name\", \"#tstobj\": \"test_object\", \"#nestf\": \"nested_field\", \"#tobj_nested\": \"test_object.nested_field\"}", # `expression` field for reserve word.
+                'tap-dynamodb.expression-attributes': "{\"#cmt\": \"Comment\", \"#name\": \"Name\"}", # `expression` field for reserve word.
                 'tap-mongodb.projection': expected_config['ProjectionExpression']
             }}]
             connections.select_catalog_and_fields_via_metadata(conn_id,
@@ -136,7 +113,5 @@ class DynamoDBProjections(TestDynamoDBBase):
                 if message['action'] == 'upsert':
                     if not message['data'].get('_sdc_deleted_at'):
                         top_level_keys = {*message['data'].keys()}
+                        # Verify that the reserved words as primary keys and replication keys are replicated.
                         self.assertEqual(config['top_level_keys'], top_level_keys)
-                        for list_key in config['top_level_list_keys']:
-                            self.assertTrue(isinstance(message['data'][list_key], list))
-                        self.assertEqual(config['nested_map_keys']['map_field'], {*message['data']['map_field'].keys()})

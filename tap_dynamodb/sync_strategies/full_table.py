@@ -1,5 +1,4 @@
 import time
-
 import singer
 from singer import metadata
 import backoff
@@ -10,7 +9,7 @@ from tap_dynamodb import dynamodb
 LOGGER = singer.get_logger()
 
 
-def scan_table(table_name, projection, last_evaluated_key, config):
+def scan_table(table_name, projection, expression, last_evaluated_key, config):
     '''
     Get all the records of the table by using `scan()` method with projection expression parameters
     '''
@@ -22,6 +21,9 @@ def scan_table(table_name, projection, last_evaluated_key, config):
     # add the projection expression in the parameters to the `scan`
     if projection is not None and projection != '':
         scan_params['ProjectionExpression'] = projection
+    if expression:
+        # Add `ExpressionAttributeNames` parameter for reserved word.
+        scan_params['ExpressionAttributeNames'] = dynamodb.decode_expression(expression)
     if last_evaluated_key is not None:
         scan_params['ExclusiveStartKey'] = last_evaluated_key
 
@@ -81,10 +83,15 @@ def sync(config, state, stream):
     md_map = metadata.to_map(stream['metadata'])
     projection = metadata.get(md_map, (), 'tap-mongodb.projection')
 
+    # An expression attribute name is a placeholder that one uses in an Amazon DynamoDB expression as an alternative to an actual attribute name.
+    # Sometimes it might need to write an expression containing an attribute name that conflicts with a DynamoDB reserved word.
+    # For example, table `A` contains the field `Comment` but `Comment` is a reserved word. So, it fails during fetch.
+    expression = metadata.get(md_map, (), 'tap-dynamodb.expression-attributes')
+
     rows_saved = 0
 
     deserializer = Deserializer()
-    for result in scan_table(table_name, projection, last_evaluated_key, config):
+    for result in scan_table(table_name, projection, expression, last_evaluated_key, config):
         for item in result.get('Items', []):
             rows_saved += 1
             # TODO: Do we actually have to put the item we retreive from

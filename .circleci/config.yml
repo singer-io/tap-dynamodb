@@ -17,6 +17,7 @@ jobs:
             virtualenv -p python3 /usr/local/share/virtualenvs/tap-dynamodb
             source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
             pip install .[dev]
+            pip install pytest-cov
       - run:
           name: 'pylint'
           command: |
