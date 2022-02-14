@@ -3,7 +3,6 @@ import singer
 
 from boto3.dynamodb.types import TypeSerializer
 
-from tap_tester.scenario import (SCENARIOS)
 from tap_tester import connections
 from tap_tester import menagerie
 from tap_tester import runner
@@ -129,6 +128,3 @@ class DynamoDBFullTableInterruptible(TestDynamoDBBase):
             self.assertIsNone(state['bookmarks'][table_name].get('last_evaluated_key'))
 
             self.assertTrue(state['bookmarks'][table_name].get('initial_full_table_complete', False))
-
-
-SCENARIOS.add(DynamoDBFullTableInterruptible)

@@ -1,8 +1,11 @@
-version: 2
+version: 2.1
+orbs:
+  slack: circleci/slack@3.4.2
+
 jobs:
   build:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
       - image: amazon/dynamodb-local
         entrypoint: ["java", "-Xmx1G", "-jar", "DynamoDBLocal.jar"]
     steps:
@@ -14,30 +17,40 @@ jobs:
             virtualenv -p python3 /usr/local/share/virtualenvs/tap-dynamodb
             source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
             pip install .[dev]
+            pip install pytest-cov
       - run:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
             make lint
       - run:
+          name: 'Unit Tests'
+          command: |
+            source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
+            pip install nose coverage
+            nosetests --with-coverage --cover-erase --cover-package=tap_dynamodb --cover-html-dir=htmlcov tests/unittests
+            coverage html
+      - store_test_results:
+          path: test_output/report.xml
+      - store_artifacts:
+          path: htmlcov
+      - run:
           name: 'Tap Tester'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox tap-tester.env
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox tap-tester.env
             source tap-tester.env
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            run-test --tap=tap-dynamodb \
-                     --target=target-stitch \
-                     --orchestrator=stitch-orchestrator \
-                     --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$SANDBOX_PASSWORD \
-                     --client-id=50 \
-                     tests
+            run-test --tap=tap-dynamodb tests
+      - slack/notify-on-failure:
+          only_for_branches: master
 workflows:
   version: 2
   commit:
     jobs:
       - build:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tap-tester-user
   build_daily:
     triggers:
       - schedule:
@@ -48,4 +61,6 @@ workflows:
                 - master
     jobs:
       - build:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tap-tester-user
