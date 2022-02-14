@@ -53,6 +53,11 @@ class Deserializer(TypeDeserializer):
         return list(map(self._deserialize_b, value))
 
     def _apply_projection(self, record, breadcrumb, output):
+        """
+        The LOG_BASED replication method uses the get_records method which gets all the records by default.
+        In case of projection expression, parse the response retrieved from the API and filter the output
+        based on projection expressions
+        """
         if len(breadcrumb) == 1:
             if '[' in breadcrumb[0]:
                 breadcrumb_key = breadcrumb[0].split('[')[0]
