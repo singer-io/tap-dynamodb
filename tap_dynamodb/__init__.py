@@ -15,6 +15,9 @@ LOGGER = singer.get_logger()
 REQUIRED_CONFIG_KEYS = ["account_id", "external_id", "role_name", "region_name"]
 
 def do_discover(config):
+    '''
+    Run the discovery mode for each streams
+    '''
     LOGGER.info("Starting discover")
     streams = discover_streams(config)
     if not streams:
@@ -24,9 +27,15 @@ def do_discover(config):
     LOGGER.info("Finished discover")
 
 def stream_is_selected(mdata):
+    '''
+    Get the streams which are selected from the catalog
+    '''
     return mdata.get((), {}).get('selected', False)
 
 def do_sync(config, catalog, state):
+    '''
+    Run the sync mode for each streams
+    '''
     LOGGER.info('Starting sync.')
 
     counts = {}
@@ -52,6 +61,9 @@ def do_sync(config, catalog, state):
     LOGGER.info('Done syncing.')
 
 def get_sync_summary(catalog, counts, times):
+    '''
+    Obtain the sync summary for all the stream tables
+    '''
     headers = [['table name',
                 'replication method',
                 'total records',

@@ -10,10 +10,15 @@ LOGGER = singer.get_logger()
 
 
 def scan_table(table_name, projection, expression, last_evaluated_key, config):
+    '''
+    Get all the records of the table by using `scan()` method with projection expression parameters
+    '''
     scan_params = {
         'TableName': table_name,
         'Limit': 1000
     }
+
+    # add the projection expression in the parameters to the `scan`
     if projection is not None and projection != '':
         scan_params['ProjectionExpression'] = projection
     if expression:

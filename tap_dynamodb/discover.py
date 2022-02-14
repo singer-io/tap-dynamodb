@@ -7,6 +7,9 @@ from tap_dynamodb import dynamodb
 LOGGER = singer.get_logger()
 
 def discover_table_schema(client, table_name):
+    '''
+    For each of the tables in the dynamodb, create the table schema for the catalog
+    '''
     try:
         table_info = client.describe_table(TableName=table_name).get('Table', {})
     except ClientError:
@@ -36,6 +39,9 @@ def discover_table_schema(client, table_name):
                     max_tries=5,
                     factor=2)
 def discover_streams(config):
+    '''
+    Get the list of the tables and create the table schema for each of them
+    '''
     client = dynamodb.get_client(config)
 
     try:

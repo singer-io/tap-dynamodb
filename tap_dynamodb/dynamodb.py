@@ -17,6 +17,9 @@ LOGGER = singer.get_logger()
 REQUEST_TIMEOUT = 300
 
 def retry_pattern():
+    '''
+    Retry logic for the ClientError
+    '''
     return backoff.on_exception(backoff.expo,
                                 (ClientError, ConnectTimeoutError, ReadTimeoutError),
                                 max_tries=5,
@@ -25,6 +28,9 @@ def retry_pattern():
 
 
 def log_backoff_attempt(details):
+    '''
+    Log the retry attempt with the number of tries
+    '''
     LOGGER.info("Error detected communicating with Amazon, triggering backoff: %d try", details.get("tries"))
 
 
@@ -43,6 +49,9 @@ class AssumeRoleProvider():
 
 @retry_pattern()
 def setup_aws_client(config):
+    """
+    Setup the aws session for making the API calls
+    """
     role_arn = "arn:aws:iam::{}:role/{}".format(config['account_id'].replace('-', ''),
                                                 config['role_name'])
 
@@ -78,6 +87,9 @@ def get_request_timeout(config):
     return request_timeout
 
 def get_client(config):
+    """
+    Client for FULL_TABLE and running discover mode.
+    """
     # get the request_timeout
     request_timeout = get_request_timeout(config)
     # add the request_timeout in both connect_timeout as well as read_timeout
@@ -93,6 +105,9 @@ def get_client(config):
                         )
 
 def get_stream_client(config):
+    """
+    Streams client for the LOG_BASED sync.
+    """
     # get the request_timeout
     request_timeout = get_request_timeout(config)
     # add the request_timeout in both connect_timeout as well as read_timeout
