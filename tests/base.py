@@ -7,14 +7,15 @@ from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
 
 import singer
 
-import tap_tester.connections as connections
-import tap_tester.menagerie   as menagerie
-import tap_tester.runner      as runner
+from tap_tester import connections
+from tap_tester import menagerie
+from tap_tester import runner
 
 ALL_TABLE_NAMES_TO_CLEAR = frozenset({
     'simple_table_1',
     'simple_table_2',
     'simple_table_3',
+    'simple_table_4',
     'com-stitchdata-test-dynamodb-integration-simple_table_1',
 })
 

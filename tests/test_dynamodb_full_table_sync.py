@@ -4,10 +4,9 @@ import singer
 
 from boto3.dynamodb.types import TypeSerializer
 
-from tap_tester.scenario import (SCENARIOS)
-import tap_tester.connections as connections
-import tap_tester.menagerie   as menagerie
-import tap_tester.runner      as runner
+from tap_tester import connections
+from tap_tester import menagerie
+from tap_tester import runner
 
 from base import TestDynamoDBBase
 
@@ -108,5 +107,3 @@ class DynamoDBFullTable(TestDynamoDBBase):
             # assert that there is a version bookmark in state
             first_versions[table_name] = state['bookmarks'][table_name]['version']
             self.assertIsNotNone(first_versions[table_name])
-
-SCENARIOS.add(DynamoDBFullTable)

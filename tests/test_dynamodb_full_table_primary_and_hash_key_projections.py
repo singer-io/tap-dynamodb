@@ -5,60 +5,72 @@ from boto3.dynamodb.types import TypeSerializer
 from tap_tester import connections
 from tap_tester import menagerie
 from tap_tester import runner
-
 from base import TestDynamoDBBase
 
 LOGGER = singer.get_logger()
 
 
-class DynamoDBLogBased(TestDynamoDBBase):
+class DynamoDBFullTablePrimaryAndHashKeyReservedWords(TestDynamoDBBase):
     def expected_table_config(self):
         return [
-            {'TableName': 'com-stitchdata-test-dynamodb-integration-simple_table_1',
-             'HashKey': 'int_id',
-             'HashType': 'N',
-             'generator': self.generate_items,
-             'num_rows': 100},
+            {
+                'TableName': 'simple_table_4',
+                # Added the `Comment` which is a reserved word as the primary key (HashKey) to verify the expression attributes works for them
+                'HashKey': 'Comment',
+                'HashType': 'N',
+                # Added the `Name` which is a reserved word as the replication key (SortKey) to verify the expression attributes works for them
+                'SortKey': 'Name',
+                'SortType': 'S',
+                'generator': self.generate_simple_items_4,
+                'num_rows': 100,
+                'ProjectionExpression': '#cmt, #name',
+                'top_level_keys': {'Name', 'Comment'}
+            }
         ]
 
-    def generate_items(self, num_items, start_key=0):
+    @staticmethod
+    def generate_simple_items_4(num_items, start_key=0):
+        '''Generate unique records for the table.'''
         serializer = TypeSerializer()
         for i in range(start_key, start_key + num_items):
             record = {
-                'int_id': i,
-                'string_field': self.random_string_generator(),
+                'Comment': i,
+                'Name': 'Test Name' + str(i),
                 'boolean_field': True,
             }
             yield serializer.serialize(record)
 
     @staticmethod
     def name():
-        return "tap_tester_dynamodb_log_based"
+        return "tt_dynamodb_ft_pkhk_projections"
 
     def test_run(self):
-        (table_configs, conn_id, expected_streams) = self.pre_sync_test()
+        (table_configs, conn_id, _) = self.pre_sync_test()
 
         # Select simple_coll_1 and simple_coll_2 streams and add replication method metadata
         found_catalogs = menagerie.get_catalogs(conn_id)
         for stream_catalog in found_catalogs:
+            expected_config = [x for x in table_configs if x['TableName'] == stream_catalog['tap_stream_id']][0]
             annotated_schema = menagerie.get_annotated_schema(conn_id, stream_catalog['stream_id'])
-            additional_md = [{"breadcrumb" : [], "metadata" : {'replication-method' : 'LOG_BASED'}}]
+            additional_md = [{"breadcrumb" : [], "metadata" : {
+                'replication-method' : 'FULL_TABLE',
+                'tap-dynamodb.expression-attributes': "{\"#cmt\": \"Comment\", \"#name\": \"Name\"}", # `expression` field for reserve word.
+                'tap-mongodb.projection': expected_config['ProjectionExpression']
+            }}]
             connections.select_catalog_and_fields_via_metadata(conn_id,
                                                                stream_catalog,
                                                                annotated_schema,
                                                                additional_md)
 
-        # Disable streams forces shards to close
-        self.disableStreams(expected_streams)
         # run full table sync
         sync_job_name = runner.run_sync_mode(self, conn_id)
-        self.enableStreams(expected_streams)
 
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
         # verify the persisted schema was correct
-        records_by_stream = runner.get_records_from_target_output()
+        messages_by_stream = runner.get_records_from_target_output()
+
         expected_pks = {}
 
         for config in table_configs:
@@ -86,9 +98,9 @@ class DynamoDBLogBased(TestDynamoDBBase):
 
             # assert that an activate_version_message is first and last message sent for each stream
             self.assertEqual('activate_version',
-                             records_by_stream[table_name]['messages'][0]['action'])
+                             messages_by_stream[table_name]['messages'][0]['action'])
             self.assertEqual('activate_version',
-                             records_by_stream[table_name]['messages'][-1]['action'])
+                             messages_by_stream[table_name]['messages'][-1]['action'])
 
             # assert that the state has an initial_full_table_complete == True
             self.assertTrue(state['bookmarks'][table_name]['initial_full_table_complete'])
@@ -96,49 +108,10 @@ class DynamoDBLogBased(TestDynamoDBBase):
             first_versions[table_name] = state['bookmarks'][table_name]['version']
             self.assertIsNotNone(first_versions[table_name])
 
-        ################################
-        # Run sync again and check that no records came through
-        ################################
-        # Disable streams forces shards to close
-        self.disableStreams(expected_streams)
-        sync_job_name = runner.run_sync_mode(self, conn_id)
-        self.enableStreams(expected_streams)
-
-        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-
-        # verify the persisted schema was correct
-        records_by_stream = runner.get_records_from_target_output()
-
-        # Check that we only have 1 message (activate_version) on syncing
-        # a stream without changes
-        for stream in records_by_stream.values():
-            self.assertEqual(1, len(stream['messages']))
-
-        state = menagerie.get_state(conn_id)
-
-        # Add 10 rows to the DB
-        self.addMoreData(10)
-        # Delete some rows
-        self.deleteData(range(40, 50))
-        # Change some rows
-        self.updateData(10, 60, 'boolean_field', False)
-
-        ################################
-        # Run sync again and check that records did come through
-        ################################
-        # Disable streams forces shards to close
-        self.disableStreams(expected_streams)
-        sync_job_name = runner.run_sync_mode(self, conn_id)
-
-        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-
-        # verify the persisted schema was correct
-        records_by_stream = runner.get_records_from_target_output()
-
-        # Check that we have 31 messages come through (10 upserts, 10 deletes, 10 updated records and 1 activate version)
-        for stream in records_by_stream.values():
-            self.assertEqual(31, len(stream['messages']))
-
-        state = menagerie.get_state(conn_id)
+            # assert that the projection causes the correct fields to be returned
+            for message in messages_by_stream[table_name]['messages']:
+                if message['action'] == 'upsert':
+                    if not message['data'].get('_sdc_deleted_at'):
+                        top_level_keys = {*message['data'].keys()}
+                        # Verify that the reserved words as primary keys and replication keys are replicated.
+                        self.assertEqual(config['top_level_keys'], top_level_keys)

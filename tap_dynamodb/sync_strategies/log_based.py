@@ -1,15 +1,16 @@
 import datetime
 from singer import metadata
 import singer
-
-from tap_dynamodb import dynamodb
-from tap_dynamodb import deserialize
+import backoff
+from botocore.exceptions import ConnectTimeoutError, ReadTimeoutError
+from tap_dynamodb import dynamodb, deserialize
 
 LOGGER = singer.get_logger()
 WRITE_STATE_PERIOD = 1000
 
 SDC_DELETED_AT = "_sdc_deleted_at"
-
+MAX_TRIES = 5
+FACTOR = 2
 
 def get_shards(streams_client, stream_arn):
     '''
@@ -115,7 +116,33 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
     singer.write_state(state)
     return rows_synced
 
+def prepare_projection(projection, expression, exp_key_traverse):
+    '''
+    Prepare the projection based on the expression attributes
+    For example:
+    projections = "#c", expressions = {"#c": "Comment"}
+    return = ["Comment"]
+    Example of nested expression :
+    In Catalog - projections = "#n[0].#a", expressions = {"#n": "Name", "#a": "Age"}
+    projection passed in the function = ['#n[0]', '#a']
+    projection returned from the function = ['Name[0]', 'Age']
+    '''
+    for index, part in enumerate(projection):
+        if '#' in part:
+            replaceable_part = part.split('[', 1)[0] if '[' in part else part
+            # check if the projection placeholder is defined in the expression else raise an exception
+            if replaceable_part in expression:
+                exp_key_traverse.discard(replaceable_part)
+                # replace the value given in the expression with the key in the projection
+                projection[index] = part.replace(replaceable_part, expression[replaceable_part])
+            else:
+                raise Exception("No expression is available for the given projection: {}.".format(replaceable_part))
 
+# Backoff for both ReadTimeout and ConnectTimeout error for 5 times
+@backoff.on_exception(backoff.expo,
+                      (ReadTimeoutError, ConnectTimeoutError),
+                      max_tries=MAX_TRIES,
+                      factor=FACTOR)
 def sync(config, state, stream):
     table_name = stream['tap_stream_id']
 
@@ -124,9 +151,26 @@ def sync(config, state, stream):
 
     md_map = metadata.to_map(stream['metadata'])
     projection = metadata.get(md_map, (), 'tap-mongodb.projection')
+    expression = metadata.get(md_map, (), 'tap-dynamodb.expression-attributes')
     if projection is not None:
         projection = [x.strip().split('.') for x in projection.split(',')]
+        if expression:
+            # decode the expression in jsonified object.
+            expression = dynamodb.decode_expression(expression)
+            # loop over the expression keys
+            for expr in expression.keys():
+                # check if the expression key starts with `#` and if not raise an exception
+                if not expr[0].startswith("#"):
+                    raise Exception("Expression key '{}' must start with '#'.".format(expr))
 
+            # A set to check all the expression keys are used in the projections or not.
+            exp_key_traverse = set(expression.keys())
+
+            for proj in projection:
+                prepare_projection(proj, expression, exp_key_traverse)
+
+            if exp_key_traverse:
+                raise Exception("No projection is available for the expression keys: {}.".format(exp_key_traverse))
     # Write activate version message
     stream_version = singer.get_bookmark(state, table_name, 'version')
     singer.write_version(table_name, stream_version)
@@ -139,7 +183,7 @@ def sync(config, state, stream):
     # fully synced
     seq_number_bookmarks = singer.get_bookmark(state, table_name, 'shard_seq_numbers')
     if not seq_number_bookmarks:
-        seq_number_bookmarks = dict()
+        seq_number_bookmarks = {}
 
     # Get the list of closed shards which we have fully synced. These
     # are removed after performing a sync and not seeing the shardId
@@ -147,7 +191,7 @@ def sync(config, state, stream):
     # killed by DynamoDB and will not be returned anymore
     finished_shard_bookmarks = singer.get_bookmark(state, table_name, 'finished_shards')
     if not finished_shard_bookmarks:
-        finished_shard_bookmarks = list()
+        finished_shard_bookmarks = []
 
     # The list of shardIds we found this sync. Is used to determine which
     # finished_shard_bookmarks to kill
@@ -212,7 +256,11 @@ def has_stream_aged_out(state, table_name):
     # stream then we consider the stream to be aged out
     return time_span > datetime.timedelta(hours=19, minutes=30)
 
-
+# Backoff for both ReadTimeout and ConnectTimeout error for 5 times
+@backoff.on_exception(backoff.expo,
+                      (ReadTimeoutError, ConnectTimeoutError),
+                      max_tries=MAX_TRIES,
+                      factor=FACTOR)
 def get_initial_bookmarks(config, state, table_name):
     '''
     Returns the state including all bookmarks necessary for the initial

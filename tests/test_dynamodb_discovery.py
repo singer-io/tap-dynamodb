@@ -1,6 +1,5 @@
 from boto3.dynamodb.types import TypeSerializer
 
-from tap_tester.scenario import (SCENARIOS)
 from base import TestDynamoDBBase
 
 
@@ -53,6 +52,3 @@ class DynamoDBDiscovery(TestDynamoDBBase):
 
     def test_run(self):
         self.pre_sync_test()
-
-
-SCENARIOS.add(DynamoDBDiscovery)
