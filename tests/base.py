@@ -1,6 +1,7 @@
 import random
 import unittest
 import string
+import decimal
 
 import boto3
 from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
@@ -147,6 +148,60 @@ class TestDynamoDBBase(unittest.TestCase):
     @staticmethod
     def random_string_generator(size=6, chars=string.ascii_uppercase + string.digits):
         return ''.join(random.choice(chars) for x in range(size))
+
+    @staticmethod
+    def random_decimal_generator(digits=string.digits):
+        size = random.choice([ 5, 38 ]) # dynamo only supports 38
+        exponent = random.choice([ -128, -18, 0, 16, 126 ]) # Emax=126, Emin=-128
+        sign = random.choice([ '', '-' ])
+
+        # split the decimal digits into two parts to build it as a string
+        len_first_digit_grouping = random.choice(range(size)) + 1 # get at least one digit
+        first_digit_grouping = ''.join(random.choice(digits) for x in range(len_first_digit_grouping))
+
+        # the sum of len_first_digit_grouping + exponent must be <= Emax
+        non_zero_length = 0 # count leading zeros before the decimal point
+        first_digit_grouping_is_all_zeros = True
+        second_digit_grouping_is_all_zeros = True
+        for n in first_digit_grouping:
+            if n == '0':
+                non_zero_length += 1 # print('Leading zero processed')
+            else:
+                first_digit_grouping_is_all_zeros = False
+                break
+
+        # adjust exponent to prevent overflow if needed
+        if exponent + len_first_digit_grouping - non_zero_length > 126:
+            exponent_modifier = len_first_digit_grouping - non_zero_length
+            exponent = exponent - exponent_modifier
+
+        if len_first_digit_grouping < size: # more digits to generate after the decimal point
+            second_digit_grouping = ''.join(random.choice(digits) for x in range(size-len_first_digit_grouping))
+
+            # the sum of leading zeros to the right of the decimal - exponent must be >= Emin
+            if first_digit_grouping_is_all_zeros:
+                non_zero_length = 0 # count leading zeros after the decimal point
+                for n in second_digit_grouping:
+                    if n == '0':
+                        non_zero_length += 1 # print('Leading zero processed')
+                    else:
+                        second_digit_grouping_is_all_zeros = False
+                        break
+
+                # adjust exponent to prevent overflow if needed
+                if exponent - non_zero_length < -128:
+                    exponent_modifier = non_zero_length
+                    exponent = exponent + exponent_modifier
+
+            num = sign + first_digit_grouping + '.' + second_digit_grouping + 'e' + str(exponent)
+
+        else: # we generated all the digits in one shot (no decimal point or second_digit_grouping needed)
+            num = sign + first_digit_grouping + 'e' + str(exponent)
+
+        if first_digit_grouping_is_all_zeros and second_digit_grouping_is_all_zeros:
+            print(f'*** Generated decimal string is all zeros: {num} ***')
+
+        return decimal.Decimal(num)
 
     def enableStreams(self, table_names):
         client = self.dynamodb_client()
