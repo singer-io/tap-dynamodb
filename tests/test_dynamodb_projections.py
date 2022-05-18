@@ -1,5 +1,4 @@
 import decimal
-import singer
 
 from boto3.dynamodb.types import TypeSerializer
 
@@ -7,8 +6,6 @@ from tap_tester import connections
 from tap_tester import menagerie
 from tap_tester import runner
 from base import TestDynamoDBBase
-
-LOGGER = singer.get_logger()
 
 
 class DynamoDBProjections(TestDynamoDBBase):
