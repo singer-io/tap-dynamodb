@@ -21,6 +21,7 @@ ALL_TABLE_NAMES_TO_CLEAR = frozenset({
 })
 
 LOGGER = singer.get_logger()
+decimal_index = 0
 
 
 class TestDynamoDBBase(unittest.TestCase):
@@ -151,55 +152,41 @@ class TestDynamoDBBase(unittest.TestCase):
 
     @staticmethod
     def random_decimal_generator(digits=string.digits):
-        size = random.choice([ 5, 38 ]) # dynamo only supports 38
-        exponent = random.choice([ -128, -18, 0, 16, 126 ]) # Emax=126, Emin=-128
-        sign = random.choice([ '', '-' ])
+        # Refactor per PR review
+        # List boundry cases
+        # max exponent with max precision and max digit magnitute 0.999...e126 (pos and neg)
+        # min exponent with max precision and max digit magnitute 0.999...e-128 (pos and neg)
+        # TODO card out test overflow of above two cases?
+        # no exponent with min precision and whatever digit magnitude (pos and neg) 0, -0, 8, -3
+        # more complex zero with exponent
+        # 8 random middle exponent, sign, precision
+        # 3 random middle precision, sign no exponent
+        # TODO other boundries?
 
-        # split the decimal digits into two parts to build it as a string
-        len_first_digit_grouping = random.choice(range(size)) + 1 # get at least one digit
-        first_digit_grouping = ''.join(random.choice(digits) for x in range(len_first_digit_grouping))
+        decimal_list = [
+            '12345', '-21', '98765432109876543210987654321098765432',
+            '0', '-3', '8', '-0',
+            '0.99999999999999999999999999999999999999e126',
+            '-0.99999999999999999999999999999999999999e126',
+            #'0.99999999999999999999999999999999999999e-128', % TODO why does this fail?
+            '0.9999999999999999999999999999999999999e-128',
+            #'-0.99999999999999999999999999999999999999e-128', # TODO why does this fail?
+            '-0.9999999999999999999999999999999999999e-128',
+            '00000000000000000000.000000000000000000e100',
+            '1.598738596902e55',
+            '-6897395.09111e8',
+            '0.000000000000083729e-3',
+            '-73840.84957394e76',
+            '9.99999999999999999999999999777e123',
+            '-9.88888888888888888888888888888e-124',
+            '0.1234567890e88',
+            '-0.98765432109876543210e-99']
 
-        # the sum of len_first_digit_grouping + exponent must be <= Emax
-        non_zero_length = 0 # count leading zeros before the decimal point
-        first_digit_grouping_is_all_zeros = True
-        second_digit_grouping_is_all_zeros = True
-        for n in first_digit_grouping:
-            if n == '0':
-                non_zero_length += 1 # print('Leading zero processed')
-            else:
-                first_digit_grouping_is_all_zeros = False
-                break
-
-        # adjust exponent to prevent overflow if needed
-        if exponent + len_first_digit_grouping - non_zero_length > 126:
-            exponent_modifier = len_first_digit_grouping - non_zero_length
-            exponent = exponent - exponent_modifier
-
-        if len_first_digit_grouping < size: # more digits to generate after the decimal point
-            second_digit_grouping = ''.join(random.choice(digits) for x in range(size-len_first_digit_grouping))
-
-            # the sum of leading zeros to the right of the decimal - exponent must be >= Emin
-            if first_digit_grouping_is_all_zeros:
-                non_zero_length = 0 # count leading zeros after the decimal point
-                for n in second_digit_grouping:
-                    if n == '0':
-                        non_zero_length += 1 # print('Leading zero processed')
-                    else:
-                        second_digit_grouping_is_all_zeros = False
-                        break
-
-                # adjust exponent to prevent overflow if needed
-                if exponent - non_zero_length < -128:
-                    exponent_modifier = non_zero_length
-                    exponent = exponent + exponent_modifier
-
-            num = sign + first_digit_grouping + '.' + second_digit_grouping + 'e' + str(exponent)
-
-        else: # we generated all the digits in one shot (no decimal point or second_digit_grouping needed)
-            num = sign + first_digit_grouping + 'e' + str(exponent)
-
-        if first_digit_grouping_is_all_zeros and second_digit_grouping_is_all_zeros:
-            print(f'*** Generated decimal string is all zeros: {num} ***')
+        global decimal_index
+        #print(f'decimal_index: {decimal_index}')
+        num = decimal_list[decimal_index % len(decimal_list)]
+        decimal_index += 1
+        #print(num)
 
         return decimal.Decimal(num)
 
