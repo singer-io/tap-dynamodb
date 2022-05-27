@@ -150,7 +150,7 @@ class TestDynamoDBBase(unittest.TestCase):
     def random_string_generator(size=6, chars=string.ascii_uppercase + string.digits):
         return ''.join(random.choice(chars) for x in range(size))
 
-    @staticmethod
+    #@staticmethod # TODO is this needed?
     def random_decimal_generator(self):
         # Refactor per PR review
         # List boundry cases (20)
