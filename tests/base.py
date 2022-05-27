@@ -21,12 +21,12 @@ ALL_TABLE_NAMES_TO_CLEAR = frozenset({
 })
 
 LOGGER = singer.get_logger()
-decimal_index = 0
 
 
 class TestDynamoDBBase(unittest.TestCase):
     _client = None
     _streams_client = None
+    decimal_index = 0
 
     def expected_table_config(self):
         raise NotImplementedError
@@ -151,9 +151,9 @@ class TestDynamoDBBase(unittest.TestCase):
         return ''.join(random.choice(chars) for x in range(size))
 
     @staticmethod
-    def random_decimal_generator(digits=string.digits):
+    def random_decimal_generator(self):
         # Refactor per PR review
-        # List boundry cases
+        # List boundry cases (20)
         # max exponent with max precision and max digit magnitute 0.999...e126 (pos and neg)
         # min exponent with max precision and max digit magnitute 0.999...e-128 (pos and neg)
         # TODO card out test overflow of above two cases?
@@ -182,11 +182,8 @@ class TestDynamoDBBase(unittest.TestCase):
             '0.1234567890e88',
             '-0.98765432109876543210e-99']
 
-        global decimal_index
-        #print(f'decimal_index: {decimal_index}')
-        num = decimal_list[decimal_index % len(decimal_list)]
-        decimal_index += 1
-        #print(num)
+        num = decimal_list[self.decimal_index % len(decimal_list)]
+        self.decimal_index += 1
 
         return decimal.Decimal(num)
 
