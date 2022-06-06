@@ -150,27 +150,16 @@ class TestDynamoDBBase(unittest.TestCase):
     def random_string_generator(size=6, chars=string.ascii_uppercase + string.digits):
         return ''.join(random.choice(chars) for x in range(size))
 
-    #@staticmethod # TODO is this needed?
     def random_decimal_generator(self):
-        # Refactor per PR review
-        # List boundry cases (20)
-        # max exponent with max precision and max digit magnitute 0.999...e126 (pos and neg)
-        # min exponent with max precision and max digit magnitute 0.999...e-128 (pos and neg)
-        # TODO card out test overflow of above two cases?
-        # no exponent with min precision and whatever digit magnitude (pos and neg) 0, -0, 8, -3
-        # more complex zero with exponent
-        # 8 random middle exponent, sign, precision
-        # 3 random middle precision, sign no exponent
-        # TODO other boundries?
 
         decimal_list = [
             '12345', '-21', '98765432109876543210987654321098765432',
             '0', '-3', '8', '-0',
             '0.99999999999999999999999999999999999999e126',
             '-0.99999999999999999999999999999999999999e126',
-            #'0.99999999999999999999999999999999999999e-128', % TODO why does this fail?
+            #'0.99999999999999999999999999999999999999e-128', # BUG https://jira.talendforge.org/browse/TDL-19357
             '0.9999999999999999999999999999999999999e-128',
-            #'-0.99999999999999999999999999999999999999e-128', # TODO why does this fail?
+            #'-0.99999999999999999999999999999999999999e-128', # BUG https://jira.talendforge.org/browse/TDL-19357
             '-0.9999999999999999999999999999999999999e-128',
             '00000000000000000000.000000000000000000e100',
             '1.598738596902e55',
@@ -180,7 +169,7 @@ class TestDynamoDBBase(unittest.TestCase):
             '9.99999999999999999999999999777e123',
             '-9.88888888888888888888888888888e-124',
             '0.1234567890e88',
-            '-0.98765432109876543210e-99']
+            '-0.98765432109876543210e-99' ]
 
         num = decimal_list[self.decimal_index % len(decimal_list)]
         self.decimal_index += 1
