@@ -1,6 +1,7 @@
 import random
 import unittest
 import string
+import decimal
 
 import boto3
 from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
@@ -25,6 +26,7 @@ LOGGER = singer.get_logger()
 class TestDynamoDBBase(unittest.TestCase):
     _client = None
     _streams_client = None
+    decimal_index = 0
 
     def expected_table_config(self):
         raise NotImplementedError
@@ -147,6 +149,32 @@ class TestDynamoDBBase(unittest.TestCase):
     @staticmethod
     def random_string_generator(size=6, chars=string.ascii_uppercase + string.digits):
         return ''.join(random.choice(chars) for x in range(size))
+
+    def random_decimal_generator(self):
+
+        decimal_list = [
+            '12345', '-21', '98765432109876543210987654321098765432',
+            '0', '-3', '8', '-0',
+            '0.99999999999999999999999999999999999999e126',
+            '-0.99999999999999999999999999999999999999e126',
+            #'0.99999999999999999999999999999999999999e-128', # BUG https://jira.talendforge.org/browse/TDL-19357
+            '0.9999999999999999999999999999999999999e-128',
+            #'-0.99999999999999999999999999999999999999e-128', # BUG https://jira.talendforge.org/browse/TDL-19357
+            '-0.9999999999999999999999999999999999999e-128',
+            '00000000000000000000.000000000000000000e100',
+            '1.598738596902e55',
+            '-6897395.09111e8',
+            '0.000000000000083729e-3',
+            '-73840.84957394e76',
+            '9.99999999999999999999999999777e123',
+            '-9.88888888888888888888888888888e-124',
+            '0.1234567890e88',
+            '-0.98765432109876543210e-99' ]
+
+        num = decimal_list[self.decimal_index % len(decimal_list)]
+        self.decimal_index += 1
+
+        return decimal.Decimal(num)
 
     def enableStreams(self, table_names):
         client = self.dynamodb_client()

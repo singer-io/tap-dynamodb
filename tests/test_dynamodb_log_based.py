@@ -27,6 +27,8 @@ class DynamoDBLogBased(TestDynamoDBBase):
             record = {
                 'int_id': i,
                 'string_field': self.random_string_generator(),
+                # BUG https://jira.talendforge.org/browse/TDL-19094
+                #'decimal_field': self.random_decimal_generator(),
                 'boolean_field': True,
             }
             yield serializer.serialize(record)
