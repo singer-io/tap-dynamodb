@@ -151,7 +151,6 @@ class TestDynamoDBBase(unittest.TestCase):
         return ''.join(random.choice(chars) for x in range(size))
 
     def random_decimal_generator(self):
-
         decimal_list = [
             '12345', '-21', '98765432109876543210987654321098765432',
             '0', '-3', '8', '-0',
