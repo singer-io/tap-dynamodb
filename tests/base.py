@@ -150,7 +150,12 @@ class TestDynamoDBBase(unittest.TestCase):
     def random_string_generator(size=6, chars=string.ascii_uppercase + string.digits):
         return ''.join(random.choice(chars) for x in range(size))
 
-    def random_decimal_generator(self):
+    def decimal_generator(self):
+        """
+        Use a global decimal_index to cycle through the decimal_list below containing a wide array
+        of interesting decimal values and boundary cases. After reaching the bottom of the list
+        the cycle continues from the top of the list.
+        """
         decimal_list = [
             '12345', '-21', '98765432109876543210987654321098765432',
             '0', '-3', '8', '-0',
