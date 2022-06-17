@@ -150,6 +150,7 @@ class TestDynamoDBBase(unittest.TestCase):
     def random_string_generator(size=6, chars=string.ascii_uppercase + string.digits):
         return ''.join(random.choice(chars) for x in range(size))
 
+
     def decimal_generator(self):
         """
         Use a global decimal_index to cycle through the decimal_list below containing a wide array
