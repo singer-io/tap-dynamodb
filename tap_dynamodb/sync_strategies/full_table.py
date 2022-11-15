@@ -29,12 +29,11 @@ def scan_table(table_name, projection, expression, last_evaluated_key, config):
 
     client = dynamodb.get_client(config)
     has_more = True
+    LOGGER.info('Scanning table %s with params:', table_name)
+    for key, value in scan_params.items():
+        LOGGER.info('\t%s = %s', key, value)
 
     while has_more:
-        LOGGER.info('Scanning table %s with params:', table_name)
-        for key, value in scan_params.items():
-            LOGGER.info('\t%s = %s', key, value)
-
         result = client.scan(**scan_params)
         yield result
 
