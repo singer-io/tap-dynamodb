@@ -52,30 +52,31 @@ def setup_aws_client(config):
     """
     Setup the aws session for making the API calls
     """
-    role_arn = "arn:aws:iam::{}:role/{}".format(config['account_id'].replace('-', ''),
-                                                config['role_name'])
+    if 'role_name' in config:
+        role_arn = "arn:aws:iam::{}:role/{}".format(config['account_id'].replace('-', ''),
+                                                    config['role_name'])
 
-    session = Session()
-    fetcher = AssumeRoleCredentialFetcher(
-        session.create_client,
-        session.get_credentials(),
-        role_arn,
-        extra_args={
-            'DurationSeconds': 3600,
-            'RoleSessionName': 'TapDynamodDB',
-            'ExternalId': config['external_id']
-        },
-        cache=JSONFileCache()
-    )
+        session = Session()
+        fetcher = AssumeRoleCredentialFetcher(
+            session.create_client,
+            session.get_credentials(),
+            role_arn,
+            extra_args={
+                'DurationSeconds': 3600,
+                'RoleSessionName': 'TapDynamodDB',
+                'ExternalId': config['external_id']
+            },
+            cache=JSONFileCache()
+        )
 
-    refreshable_session = Session()
-    refreshable_session.register_component(
-        'credential_provider',
-        CredentialResolver([AssumeRoleProvider(fetcher)])
-    )
+        refreshable_session = Session()
+        refreshable_session.register_component(
+            'credential_provider',
+            CredentialResolver([AssumeRoleProvider(fetcher)])
+        )
 
-    LOGGER.info("Attempting to assume_role on RoleArn: %s", role_arn)
-    boto3.setup_default_session(botocore_session=refreshable_session)
+        LOGGER.info("Attempting to assume_role on RoleArn: %s", role_arn)
+        boto3.setup_default_session(botocore_session=refreshable_session)
 
 def get_request_timeout(config):
     # if request_timeout is other than 0,"0" or "" then use request_timeout

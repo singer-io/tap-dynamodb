@@ -3,8 +3,8 @@ import singer
 from singer import metadata
 import backoff
 from botocore.exceptions import ConnectTimeoutError, ReadTimeoutError
-from tap_dynamodb.deserialize import Deserializer
-from tap_dynamodb import dynamodb
+from tap_dz_dynamodb.deserialize import Deserializer
+from tap_dz_dynamodb import dynamodb
 
 LOGGER = singer.get_logger()
 
@@ -86,7 +86,7 @@ def sync(config, state, stream):
     # An expression attribute name is a placeholder that one uses in an Amazon DynamoDB expression as an alternative to an actual attribute name.
     # Sometimes it might need to write an expression containing an attribute name that conflicts with a DynamoDB reserved word.
     # For example, table `A` contains the field `Comment` but `Comment` is a reserved word. So, it fails during fetch.
-    expression = metadata.get(md_map, (), 'tap-dynamodb.expression-attributes')
+    expression = metadata.get(md_map, (), 'tap-dz-dynamodb.expression-attributes')
 
     rows_saved = 0
 

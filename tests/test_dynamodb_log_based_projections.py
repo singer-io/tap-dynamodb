@@ -79,7 +79,7 @@ class DynamoDBLogBasedProjections(TestDynamoDBBase):
                     "breadcrumb": [],
                     "metadata": {
                         'replication-method': 'LOG_BASED',
-                        'tap-dynamodb.expression-attributes': "{\"#cmt\": \"Comment\", \"#testfield\": \"TestField\", \"#name\": \"Name\", \"#abs\": \"Absolute\", \"#tstobj\": \"test_object\", \"#nestf\": \"nested_field\", \"#tobj_nested\": \"test_object.nested_field\"}", # `expression` field for reserve word.
+                        'tap-dz-dynamodb.expression-attributes': "{\"#cmt\": \"Comment\", \"#testfield\": \"TestField\", \"#name\": \"Name\", \"#abs\": \"Absolute\", \"#tstobj\": \"test_object\", \"#nestf\": \"nested_field\", \"#tobj_nested\": \"test_object.nested_field\"}", # `expression` field for reserve word.
                         'tap-mongodb.projection': table_configs[0]['ProjectionExpression']
                     }
                 }

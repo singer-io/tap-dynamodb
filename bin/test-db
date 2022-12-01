@@ -26,7 +26,7 @@ def stop_container(name):
     print("Process stopped successfully")
 
 DESCRIPTION = """
-Manage docker instance for tap-dynamodb testing.
+Manage docker instance for tap-dz-dynamodb testing.
 """
 parser = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=RawTextHelpFormatter)
 parser.add_argument('action', choices=['start','stop'], help='action to perform with the container')

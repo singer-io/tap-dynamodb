@@ -1,7 +1,7 @@
 from singer import metadata
 import singer
-from tap_dynamodb.sync_strategies import log_based
-from tap_dynamodb.sync_strategies import full_table
+from tap_dz_dynamodb.sync_strategies import log_based
+from tap_dz_dynamodb.sync_strategies import full_table
 
 LOGGER = singer.get_logger()
 
@@ -28,6 +28,13 @@ def sync_stream(config, state, stream):
 
     replication_method = metadata.get(md_map, (), 'replication-method')
     key_properties = metadata.get(md_map, (), 'table-key-properties')
+
+    rmSet = {'FULL_TABLE', 'LOG_BASED'}
+    if replication_method not in rmSet:
+        LOGGER.info('Unknown replication method: %s ', replication_method)
+        replication_method = 'LOG_BASED'
+        LOGGER.info('Setting default replication method: %s ', replication_method)
+
 
     # write state message with currently_syncing bookmark
     state = clear_state_on_replication_change(stream, state)

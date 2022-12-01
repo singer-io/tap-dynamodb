@@ -3,7 +3,7 @@ from singer import metadata
 import singer
 import backoff
 from botocore.exceptions import ConnectTimeoutError, ReadTimeoutError
-from tap_dynamodb import dynamodb, deserialize
+from tap_dz_dynamodb import dynamodb, deserialize
 
 LOGGER = singer.get_logger()
 WRITE_STATE_PERIOD = 1000
@@ -151,7 +151,7 @@ def sync(config, state, stream):
 
     md_map = metadata.to_map(stream['metadata'])
     projection = metadata.get(md_map, (), 'tap-mongodb.projection')
-    expression = metadata.get(md_map, (), 'tap-dynamodb.expression-attributes')
+    expression = metadata.get(md_map, (), 'tap-dz-dynamodb.expression-attributes')
     if projection is not None:
         projection = [x.strip().split('.') for x in projection.split(',')]
         if expression:
