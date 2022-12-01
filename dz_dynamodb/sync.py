@@ -1,7 +1,7 @@
 from singer import metadata
 import singer
-from tap_dz_dynamodb.sync_strategies import log_based
-from tap_dz_dynamodb.sync_strategies import full_table
+from dz_dynamodb.sync_strategies import log_based
+from dz_dynamodb.sync_strategies import full_table
 
 LOGGER = singer.get_logger()
 

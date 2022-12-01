@@ -2,7 +2,7 @@ from singer import metadata
 import singer
 import backoff
 from botocore.exceptions import ClientError, ConnectTimeoutError, ReadTimeoutError
-from tap_dz_dynamodb import dynamodb
+from dz_dynamodb import dynamodb
 
 LOGGER = singer.get_logger()
 
