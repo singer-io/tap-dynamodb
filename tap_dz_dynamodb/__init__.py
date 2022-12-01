@@ -5,9 +5,9 @@ import time
 from terminaltables import AsciiTable
 import singer
 from singer import metadata
-from tap_dynamodb.discover import discover_streams
-from tap_dynamodb.dynamodb import setup_aws_client
-from tap_dynamodb.sync import sync_stream
+from tap_dz_dynamodb.discover import discover_streams
+from tap_dz_dynamodb.dynamodb import setup_aws_client
+from tap_dz_dynamodb.sync import sync_stream
 
 
 LOGGER = singer.get_logger()

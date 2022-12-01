@@ -14,21 +14,21 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            virtualenv -p python3 /usr/local/share/virtualenvs/tap-dynamodb
-            source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
+            virtualenv -p python3 /usr/local/share/virtualenvs/tap-dz-dynamodb
+            source /usr/local/share/virtualenvs/tap-dz-dynamodb/bin/activate
             pip install .[dev]
             pip install pytest-cov
       - run:
           name: 'pylint'
           command: |
-            source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
+            source /usr/local/share/virtualenvs/tap-dz-dynamodb/bin/activate
             make lint
       - run:
           name: 'Unit Tests'
           command: |
-            source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
+            source /usr/local/share/virtualenvs/tap-dz-dynamodb/bin/activate
             pip install nose coverage
-            nosetests --with-coverage --cover-erase --cover-package=tap_dynamodb --cover-html-dir=htmlcov tests/unittests
+            nosetests --with-coverage --cover-erase --cover-package=tap_dz_dynamodb --cover-html-dir=htmlcov tests/unittests
             coverage html
       - store_test_results:
           path: test_output/report.xml
@@ -40,7 +40,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox tap-tester.env
             source tap-tester.env
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            run-test --tap=tap-dynamodb tests
+            run-test --tap=tap-dz-dynamodb tests
       - slack/notify-on-failure:
           only_for_branches: master
 workflows:

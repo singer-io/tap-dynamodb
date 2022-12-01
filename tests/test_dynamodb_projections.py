@@ -77,7 +77,7 @@ class DynamoDBProjections(TestDynamoDBBase):
             annotated_schema = menagerie.get_annotated_schema(conn_id, stream_catalog['stream_id'])
             additional_md = [{"breadcrumb" : [], "metadata" : {
                 'replication-method' : 'FULL_TABLE',
-                'tap-dynamodb.expression-attributes': "{\"#cmt\": \"Comment\", \"#testfield\": \"TestField\", \"#name\": \"Name\", \"#tstobj\": \"test_object\", \"#nestf\": \"nested_field\", \"#tobj_nested\": \"test_object.nested_field\"}", # `expression` field for reserve word.
+                'tap-dz-dynamodb.expression-attributes': "{\"#cmt\": \"Comment\", \"#testfield\": \"TestField\", \"#name\": \"Name\", \"#tstobj\": \"test_object\", \"#nestf\": \"nested_field\", \"#tobj_nested\": \"test_object.nested_field\"}", # `expression` field for reserve word.
                 'tap-mongodb.projection': expected_config['ProjectionExpression']
             }}]
             connections.select_catalog_and_fields_via_metadata(conn_id,

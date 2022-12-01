@@ -1,5 +1,5 @@
 import unittest
-from tap_dynamodb import deserialize
+from tap_dz_dynamodb import deserialize
 
 class TestDeserializer(unittest.TestCase):
 

@@ -2,13 +2,13 @@
 from setuptools import setup
 
 setup(
-    name="tap-dynamodb",
-    version="1.2.0",
+    name="tap-dz-dynamodb",
+    version="1.2.1",
     description="Singer.io tap for extracting data",
     author="Stitch",
     url="http://singer.io",
     classifiers=["Programming Language :: Python :: 3 :: Only"],
-    py_modules=["tap_dynamodb"],
+    py_modules=["tap_dz_dynamodb"],
     install_requires=[
         'boto3==1.14.9',
         "singer-python==5.9.0",
@@ -24,9 +24,9 @@ setup(
     },
     entry_points="""
     [console_scripts]
-    tap-dynamodb=tap_dynamodb:main
+    tap-dz-dynamodb=tap_dz_dynamodb:main
     """,
-    packages=["tap_dynamodb", 'tap_dynamodb.sync_strategies'],
+    packages=["tap_dz_dynamodb", 'tap_dz_dynamodb.sync_strategies'],
     package_data = {},
     include_package_data=True,
 )

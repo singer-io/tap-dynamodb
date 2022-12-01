@@ -58,7 +58,7 @@ class TestDynamoDBBase(unittest.TestCase):
 
     @staticmethod
     def tap_name():
-        return "tap-dynamodb"
+        return "tap-dz-dynamodb"
 
     @staticmethod
     def get_type():
