@@ -53,10 +53,6 @@ def sync_stream(config, state, stream):
     elif replication_method == 'LOG_BASED':
         LOGGER.info("Syncing log based for stream: %s", table_name)
 
-        if log_based.has_stream_aged_out(state, table_name):
-            LOGGER.info("Clearing state because stream has aged out")
-            state.get('bookmarks', {}).pop(table_name)
-
         if not singer.get_bookmark(state, table_name, 'initial_full_table_complete'):
             msg = 'Must complete full table sync before replicating from dynamodb streams for %s'
             LOGGER.info(msg, table_name)
@@ -65,6 +61,15 @@ def sync_stream(config, state, stream):
             singer.write_state(state)
 
             rows_saved += full_table.sync(config, state, stream)
+
+        if log_based.has_stream_aged_out(state, table_name):
+            LOGGER.info("Clearing state because stream has aged out...")
+            state.get('bookmarks', {}).pop(table_name)
+            # as full table already done
+            state = singer.write_bookmark(state,
+                                    table_name,
+                                    'initial_full_table_complete',
+                                    True)
 
         rows_saved += log_based.sync(config, state, stream)
     else:
