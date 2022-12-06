@@ -70,6 +70,7 @@ def sync_stream(config, state, stream):
                                     table_name,
                                     'initial_full_table_complete',
                                     True)
+            singer.write_state(state)
 
         rows_saved += log_based.sync(config, state, stream)
     else:
