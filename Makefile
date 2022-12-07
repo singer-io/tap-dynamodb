@@ -9,6 +9,7 @@ lint-code:
 lint: lint-code lint-tests
 
 build-tap:
+	rm -rf dist ;
 	python setup.py sdist bdist_wheel
 
 publish:
