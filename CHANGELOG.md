@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.1
+  * Reduce logging by only logging once at the start of a full-table scan [#48](https://github.com/singer-io/tap-dynamodb/pull/48)
+
 ## 1.2.0
   * Expression attributes implementation [#37](https://github.com/singer-io/tap-dynamodb/pull/37)
   * Implement request timeout [#38](https://github.com/singer-io/tap-dynamodb/pull/38)
