@@ -17,6 +17,9 @@ def scan_table(table_name, projection, expression, last_evaluated_key, config):
         'TableName': table_name,
         'Limit': 1000
     }
+    if 'FilterExpression' in config:
+        scan_params['FilterExpression'] = config['FilterExpression']
+        scan_params['ExpressionAttributeValues'] = config['ExpressionAttributeValues']
 
     # add the projection expression in the parameters to the `scan`
     if projection is not None and projection != '':
