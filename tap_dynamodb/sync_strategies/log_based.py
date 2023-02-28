@@ -152,7 +152,7 @@ def sync(config, state, stream):
     md_map = metadata.to_map(stream['metadata'])
     projection = metadata.get(md_map, (), 'tap-mongodb.projection')
     expression = metadata.get(md_map, (), 'tap-dynamodb.expression-attributes')
-    if projection is not None:
+    if projection is not None and projection != '':
         projection = [x.strip().split('.') for x in projection.split(',')]
         if expression:
             # decode the expression in jsonified object.

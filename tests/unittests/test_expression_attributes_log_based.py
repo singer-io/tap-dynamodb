@@ -82,7 +82,7 @@ class TestExpressionAttributesInLogBasedSync(unittest.TestCase):
         """Test expression attribute with empty string passed in `projection` field."""   
         res = sync(CONFIG, STATE, STREAM)
         
-        mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', [['']], {}, 'GoogleDocs', {}, {})
+        mock_sync_shard.assert_called_with({'SequenceNumberRange': {'EndingSequenceNumber': 'dummy_no'}, 'ShardId': 'dummy_id'}, {}, client, 'dummy_arn', '', {}, 'GoogleDocs', {}, {})
 
     @patch('singer.metadata.get', side_effect =["#tst[4].#n, #tst[4].#a, Test", "{\"#tst\": \"test1\", \"#n\": \"Name\", \"#a\": \"Age\"}"])
     @patch('tap_dynamodb.sync_strategies.log_based.sync_shard', return_value = 1)
