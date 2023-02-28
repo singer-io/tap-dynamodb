@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.2
+  * Fix empty string projection filter [#49](https://github.com/singer-io/tap-dynamodb/pull/49)
+
 ## 1.2.1
   * Reduce logging by only logging once at the start of a full-table scan [#48](https://github.com/singer-io/tap-dynamodb/pull/48)
 
