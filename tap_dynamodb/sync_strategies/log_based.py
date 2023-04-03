@@ -88,10 +88,11 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
             record_message = deserializer.deserialize_item(record['dynamodb']['Keys'])
             record_message[SDC_DELETED_AT] = singer.utils.strftime(record['dynamodb']['ApproximateCreationDateTime'])
         else:
-            record_message = deserializer.deserialize_item(record['dynamodb'].get('NewImage'))
-            if record_message is None:
+            new_image = record['dynamodb'].get('NewImage')
+            if new_image is None:
                 LOGGER.fatal('Dynamo stream view type must be either "NEW_IMAGE" "NEW_AND_OLD_IMAGES"')
                 raise RuntimeError('Dynamo stream view type must be either "NEW_IMAGE" "NEW_AND_OLD_IMAGES"')
+            record_message = deserializer.deserialize_item(new_image)
             if projection is not None and projection != '':
                 try:
                     record_message = deserializer.apply_projection(record_message, projection)
