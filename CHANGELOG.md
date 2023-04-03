@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.3
+  * Fix error handling for log-based setup [#50](https://github.com/singer-io/tap-dynamodb/pull/50)
+
 ## 1.2.2
   * Fix empty string projection filter [#49](https://github.com/singer-io/tap-dynamodb/pull/49)
 
