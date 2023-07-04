@@ -23,15 +23,47 @@ def discover_table_schema(client, table_name):
     if table_info.get('ItemCount'):
         mdata = metadata.write(mdata, (), 'row-count', table_info['ItemCount'])
 
-    return {
+    db_schema = {
         'table_name': table_name,
         'stream': table_name,
         'tap_stream_id': table_name,
         'metadata': metadata.to_list(mdata),
         'schema': {
-            'type': 'object'
+            'type': 'object',
+             'properties': {
+             }
         }
     }
+    # Get columns and data types
+    response = client.scan(TableName=table_name)
+    items = response.get('Items', [])
+    max_item_check = 1000
+    
+    for item in items:
+        if(max_item_check>0):
+            max_item_check-=1
+            for column_name,column_value in item.items():
+                val_type = get_type_of_value(column_value)
+                db_schema['schema']['properties'][column_name] = {"type": val_type}
+    return db_schema
+
+def get_type_of_value(value):
+    type_mapping = {
+        'NULL': 'null',
+        'S': 'string',
+        'N': 'number',
+        'BOOL': 'boolean',
+        'L': 'array',
+        'M': 'object'
+    }
+    if isinstance(value,dict):
+        for key in value:
+            if key in type_mapping:
+                if callable(type_mapping[key]):
+                    return type_mapping[key](value[key])
+                return type_mapping[key]
+
+    return 'unknown'
 
 # Backoff for both ReadTimeout and ConnectTimeout error for 5 times
 @backoff.on_exception(backoff.expo,
