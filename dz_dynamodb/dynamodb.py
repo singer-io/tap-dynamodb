@@ -46,13 +46,33 @@ class AssumeRoleProvider():
             self.METHOD
         )
 
+def setup_aws_client_with_access_and_secret_key(config):
+    """
+    Args : config
+    """
+
+    aws_access_key = config['access_key']
+    aws_access_secret_key = config['secret_access_key']
+    aws_region_name = config['region_name']
+
+    session = boto3.Session(
+        aws_access_key_id=aws_access_key,
+        aws_secret_access_key=aws_access_secret_key,
+        region_name=aws_region_name
+    )
+
+    LOGGER.info("Attempting to access AWS resources")
+    boto3.setup_default_session(botocore_session=session._session)
 
 @retry_pattern()
 def setup_aws_client(config):
     """
     Setup the aws session for making the API calls
     """
-    if 'role_name' in config:
+
+    if 'access_key' in config and 'secret_access_key' in config:
+        setup_aws_client_with_access_and_secret_key(config)
+    elif 'role_name' in config:
         role_arn = "arn:aws:iam::{}:role/{}".format(config['account_id'].replace('-', ''),
                                                     config['role_name'])
 
