@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="dz-dynamodb",
-    version="1.4.0",
+    version="1.4.1",
     description="Singer.io tap for extracting data",
     author="Stitch",
     url="http://singer.io",
