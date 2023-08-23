@@ -71,8 +71,9 @@ def setup_aws_client(config):
     """
 
     if ('access_key' in config) and ('secret_access_key' in config) and (config['access_key'] != "") and (config['secret_access_key'] != ""):
+        # TODO : Access key, secret key and role name given , then in get_credentials , provide access key and secret key
         setup_aws_client_with_access_and_secret_key(config)
-    elif ('role_name' in config) and (config['role_name'] != "") and (config['account_id'] != ""):
+    elif ('role_name' in config) and (config['role_name'] != "") and (config['account_id'] != "") and (config['external_id'] != ""):
         role_arn = "arn:aws:iam::{}:role/{}".format(config['account_id'].replace('-', ''),
                                                 config['role_name'])
         session = Session()
