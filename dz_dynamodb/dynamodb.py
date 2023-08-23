@@ -70,13 +70,13 @@ def setup_aws_client(config):
     Setup the aws session for making the API calls
     """
 
-    if 'access_key' in config and 'secret_access_key' in config:
+    if ('access_key' in config) and ('secret_access_key' in config) and (config['access_key'] != "") and (config['secret_access_key'] != ""):
         setup_aws_client_with_access_and_secret_key(config)
-    elif 'role_name' in config:
+    elif ('role_name' in config) and (config['role_name'] != "") and (config['account_id'] != ""):
         role_arn = "arn:aws:iam::{}:role/{}".format(config['account_id'].replace('-', ''),
-                                                    config['role_name'])
-
+                                                config['role_name'])
         session = Session()
+
         fetcher = AssumeRoleCredentialFetcher(
             session.create_client,
             session.get_credentials(),
@@ -97,6 +97,8 @@ def setup_aws_client(config):
 
         LOGGER.info("Attempting to assume_role on RoleArn: %s", role_arn)
         boto3.setup_default_session(botocore_session=refreshable_session)
+    else:
+        raise Exception("Either provide Access Key and Secret Key or Assume role by providing account id, external id and role name")
 
 def get_request_timeout(config):
     # if request_timeout is other than 0,"0" or "" then use request_timeout
