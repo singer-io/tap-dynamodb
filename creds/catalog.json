@@ -1,0 +1,38 @@
+{
+  "streams": [
+    {
+      "table_name": "clc-stag-machine",
+      "stream": "clc-stag-machine",
+      "tap_stream_id": "clc-stag-machine",
+      "metadata": [
+        {
+          "breadcrumb": [],
+          "metadata": {
+            "table-key-properties": [
+              "machine_type"
+            ],
+            "selected": true,
+            "replication-method": "LOG_BASED"
+          }
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "cloud_provider": {
+            "type": "string"
+          },
+          "credit": {
+            "type": "number"
+          },
+          "arch": {
+            "type": "string"
+          },
+          "machine_type": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

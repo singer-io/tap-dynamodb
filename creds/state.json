@@ -1,0 +1,19 @@
+{
+  "bookmarks": {
+    "clc-stag-machine": {
+      "finished_shards": [
+        "shardId-00000001694069401517-da60fed8",
+        "shardId-00000001694069401517-da60fed8",
+        "shardId-00000001694069401517-da60fed8"
+      ],
+      "version": 1694086154889,
+      "initial_full_table_complete": true,
+      "shard_seq_numbers": {
+        "shardId-00000001694085133752-f7f02371": "679035900000000027586731253"
+      },
+      "success_timestamp": "2023-09-07T11:41:31.779778Z",
+      "last_replication_method": "LOG_BASED"
+    }
+  },
+  "currently_syncing": "clc-stag-machine"
+}

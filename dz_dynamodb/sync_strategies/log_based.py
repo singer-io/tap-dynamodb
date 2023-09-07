@@ -15,10 +15,14 @@ FACTOR = 2
 def get_shards(streams_client, stream_arn):
     '''
     Yields closed shards.
-
-    We only yield closed shards because it is
-    impossible to tell if an open shard has any more records or if you
-    will infinitely loop over the lastEvaluatedShardId
+    previously before datazip :
+        We only yield closed shards because it is
+        impossible to tell if an open shard has any more records or if you
+        will infinitely loop over the lastEvaluatedShardId
+        https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_streams_DescribeStream.html
+        for documentation on how to identify closed shards
+    now by datazip: 
+        We yield each shard as we are taking care of number of iteration on each shard
     '''
 
     params = {
@@ -31,12 +35,7 @@ def get_shards(streams_client, stream_arn):
         stream_info = streams_client.describe_stream(**params)['StreamDescription']
 
         for shard in stream_info['Shards']:
-            # See
-            # https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_streams_DescribeStream.html
-            # for documentation on how to identify closed shards
-            # Closed shards all have an EndingSequenceNumber
-            if shard['SequenceNumberRange'].get('EndingSequenceNumber'):
-                yield shard
+            yield shard
 
         last_evaluated_shard_id = stream_info.get('LastEvaluatedShardId')
         has_more = last_evaluated_shard_id is not None
@@ -45,7 +44,7 @@ def get_shards(streams_client, stream_arn):
             params['ExclusiveStartShardId'] = last_evaluated_shard_id
 
 
-def get_shard_records(streams_client, stream_arn, shard, sequence_number):
+def get_shard_records(streams_client, stream_arn, shard, sequence_number,max_iteration_for_open_shards:int = 1000):
     '''
     This should only be called on closed shards. Calling this on an open
     shard will lead to an infinite loop
@@ -62,30 +61,36 @@ def get_shard_records(streams_client, stream_arn, shard, sequence_number):
         'ShardId': shard['ShardId'],
         'ShardIteratorType': iterator_type
     }
-
+    print(f"Setting max_iteration_for_open_shards to {max_iteration_for_open_shards}")
     if sequence_number:
         params['SequenceNumber'] = sequence_number
 
     shard_iterator = streams_client.get_shard_iterator(**params)['ShardIterator']
-
-    # This will loop indefinitely if called on open shards
     while shard_iterator:
         records = streams_client.get_records(ShardIterator=shard_iterator, Limit=1000)
-
+        # for open shards the loop will not so breaking once iterating limit become 0
+        if max_iteration_for_open_shards==0 and not shard['SequenceNumberRange'].get('EndingSequenceNumber') :
+            break
+        max_iteration_for_open_shards-=1
         for record in records['Records']:
             yield record
-
         shard_iterator = records.get('NextShardIterator')
 
 
-def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projection, deserializer, table_name, stream_version, state):
+def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projection, deserializer, table_name, stream_version, state,max_iteration_for_open_shards):
     seq_number = seq_number_bookmarks.get(shard['ShardId'])
 
     rows_synced = 0
 
-    for record in get_shard_records(streams_client, stream_arn, shard, seq_number):
+    for record in get_shard_records(streams_client, stream_arn, shard, seq_number,max_iteration_for_open_shards):
         if record['eventName'] == 'REMOVE':
             record_message = deserializer.deserialize_item(record['dynamodb']['Keys'])
+            # for open shards their can be error of parsing timestamp
+            if not shard['SequenceNumberRange'].get('EndingSequenceNumber'):
+                input_datetime = datetime.datetime.strptime(str(record['dynamodb']['ApproximateCreationDateTime']), '%Y-%m-%d %H:%M:%S%z')
+                utc_datetime = input_datetime.astimezone(datetime.timezone.utc)
+                record['dynamodb']['ApproximateCreationDateTime'] = utc_datetime
+
             record_message[SDC_DELETED_AT] = singer.utils.strftime(record['dynamodb']['ApproximateCreationDateTime'])
         else:
             record_message = deserializer.deserialize_item(record['dynamodb'].get('NewImage'))
@@ -147,6 +152,8 @@ def sync(config, state, stream):
     table_name = stream['tap_stream_id']
 
     client = dynamodb.get_client(config)
+    # for open shards their will be a continous loop while getting records so to handle that max_iteration_for_open_shards is used
+    max_iteration_for_open_shards = config.get('max_iteration_for_open_shards')
     streams_client = dynamodb.get_stream_client(config)
 
     md_map = metadata.to_map(stream['metadata'])
@@ -200,23 +207,23 @@ def sync(config, state, stream):
     deserializer = deserialize.Deserializer()
 
     rows_synced = 0
-
     for shard in get_shards(streams_client, stream_arn):
         found_shards.append(shard['ShardId'])
         # Only sync shards which we have not fully synced already
         if shard['ShardId'] not in finished_shard_bookmarks:
             rows_synced += sync_shard(shard, seq_number_bookmarks,
                                       streams_client, stream_arn, projection, deserializer,
-                                      table_name, stream_version, state)
+                                      table_name, stream_version, state,max_iteration_for_open_shards)
 
-        # Now that we have fully synced the shard, move it from the
+        # Now that we have fully synced the closed shard, move it from the
         # shard_seq_numbers to finished_shards.
-        finished_shard_bookmarks.append(shard['ShardId'])
-        state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
-
-        if seq_number_bookmarks.get(shard['ShardId']):
-            seq_number_bookmarks.pop(shard['ShardId'])
-            state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
+        if shard['SequenceNumberRange'].get('EndingSequenceNumber'):
+            # shard closed mark it to finished
+            finished_shard_bookmarks.append(shard['ShardId'])
+            state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
+            if seq_number_bookmarks.get(shard['ShardId']):
+                seq_number_bookmarks.pop(shard['ShardId'])
+                state = singer.write_bookmark(state, table_name, 'shard_seq_numbers', seq_number_bookmarks)
 
         singer.write_state(state)
 
@@ -275,8 +282,8 @@ def get_initial_bookmarks(config, state, table_name):
 
     table = client.describe_table(TableName=table_name)['Table']
     stream_arn = table['LatestStreamArn']
-
-    finished_shard_bookmarks = [shard['ShardId'] for shard in get_shards(streams_client, stream_arn)]
+    # only closed shards are finished 
+    finished_shard_bookmarks = [shard['ShardId'] for shard in get_shards(streams_client, stream_arn) if shard['SequenceNumberRange'].get('EndingSequenceNumber')]
     state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
 
     return state
