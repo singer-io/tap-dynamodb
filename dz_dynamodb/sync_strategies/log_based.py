@@ -12,7 +12,7 @@ SDC_DELETED_AT = "_sdc_deleted_at"
 MAX_TRIES = 5
 FACTOR = 2
 
-def get_shards(streams_client, stream_arn):
+def get_shards(streams_client, stream_arn,found_max_iteration_for_open_shards):
     '''
     Yields closed shards.
     previously before datazip :
@@ -35,7 +35,11 @@ def get_shards(streams_client, stream_arn):
         stream_info = streams_client.describe_stream(**params)['StreamDescription']
 
         for shard in stream_info['Shards']:
-            yield shard
+            if found_max_iteration_for_open_shards:
+                yield shard
+            else:
+                if shard['SequenceNumberRange'].get('EndingSequenceNumber'):
+                    yield shard
 
         last_evaluated_shard_id = stream_info.get('LastEvaluatedShardId')
         has_more = last_evaluated_shard_id is not None
@@ -44,7 +48,7 @@ def get_shards(streams_client, stream_arn):
             params['ExclusiveStartShardId'] = last_evaluated_shard_id
 
 
-def get_shard_records(streams_client, stream_arn, shard, sequence_number,max_iteration_for_open_shards:int = 1000):
+def get_shard_records(streams_client, stream_arn, shard, sequence_number,max_iteration_for_open_shards):
     '''
     This should only be called on closed shards. Calling this on an open
     shard will lead to an infinite loop
@@ -153,7 +157,13 @@ def sync(config, state, stream):
 
     client = dynamodb.get_client(config)
     # for open shards their will be a continous loop while getting records so to handle that max_iteration_for_open_shards is used
-    max_iteration_for_open_shards = config.get('max_iteration_for_open_shards')
+    found_max_iteration_for_open_shards = False
+    if config.get('max_iteration_for_open_shards') :
+         max_iteration_for_open_shards = config.get('max_iteration_for_open_shards')
+         found_max_iteration_for_open_shards = True
+    else:
+        # set default limit of iteration for open shards
+        max_iteration_for_open_shards = 1000
     streams_client = dynamodb.get_stream_client(config)
 
     md_map = metadata.to_map(stream['metadata'])
@@ -207,7 +217,7 @@ def sync(config, state, stream):
     deserializer = deserialize.Deserializer()
 
     rows_synced = 0
-    for shard in get_shards(streams_client, stream_arn):
+    for shard in get_shards(streams_client, stream_arn,found_max_iteration_for_open_shards):
         found_shards.append(shard['ShardId'])
         # Only sync shards which we have not fully synced already
         if shard['ShardId'] not in finished_shard_bookmarks:
@@ -283,7 +293,7 @@ def get_initial_bookmarks(config, state, table_name):
     table = client.describe_table(TableName=table_name)['Table']
     stream_arn = table['LatestStreamArn']
     # only closed shards are finished 
-    finished_shard_bookmarks = [shard['ShardId'] for shard in get_shards(streams_client, stream_arn) if shard['SequenceNumberRange'].get('EndingSequenceNumber')]
+    finished_shard_bookmarks = [shard['ShardId'] for shard in get_shards(streams_client, stream_arn,False)]
     state = singer.write_bookmark(state, table_name, 'finished_shards', finished_shard_bookmarks)
 
     return state
