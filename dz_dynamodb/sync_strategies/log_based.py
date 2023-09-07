@@ -158,12 +158,11 @@ def sync(config, state, stream):
     client = dynamodb.get_client(config)
     # for open shards their will be a continous loop while getting records so to handle that max_iteration_for_open_shards is used
     found_max_iteration_for_open_shards = False
+    max_iteration_for_open_shards = 1000
     if config.get('max_iteration_for_open_shards') :
+         # override max_iteration_for_open_shards with config value
          max_iteration_for_open_shards = config.get('max_iteration_for_open_shards')
          found_max_iteration_for_open_shards = True
-    else:
-        # set default limit of iteration for open shards
-        max_iteration_for_open_shards = 1000
     streams_client = dynamodb.get_stream_client(config)
 
     md_map = metadata.to_map(stream['metadata'])
