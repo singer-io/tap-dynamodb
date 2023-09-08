@@ -12,10 +12,11 @@ SDC_DELETED_AT = "_sdc_deleted_at"
 MAX_TRIES = 5
 FACTOR = 2
 
-def get_shards(streams_client, stream_arn,need_open_shards):
+def get_shards(streams_client, stream_arn,get_open_shards):
     '''
-    Yields closed shards.
+   
     previously before datazip :
+        Yields closed shards.
         We only yield closed shards because it is
         impossible to tell if an open shard has any more records or if you
         will infinitely loop over the lastEvaluatedShardId
@@ -35,7 +36,7 @@ def get_shards(streams_client, stream_arn,need_open_shards):
         stream_info = streams_client.describe_stream(**params)['StreamDescription']
 
         for shard in stream_info['Shards']:
-            if need_open_shards:
+            if get_open_shards:
                 yield shard
             else:
                 if shard['SequenceNumberRange'].get('EndingSequenceNumber'):
@@ -90,6 +91,8 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
     for record in get_shard_records(streams_client, stream_arn, shard, seq_number,max_iteration_for_open_shards):
         if record['eventName'] == 'REMOVE':
             record_message = deserializer.deserialize_item(record['dynamodb']['Keys'])
+            # dynamodb provide datetime in different formats so if not get parsed by utils try to convert in utc format and 
+            # try again to parse
             try:
                 record_message[SDC_DELETED_AT] = singer.utils.strftime(record['dynamodb']['ApproximateCreationDateTime'])
             except Exception as e :
@@ -213,8 +216,9 @@ def sync(config, state, stream):
     deserializer = deserialize.Deserializer()
 
     rows_synced = 0
-    open_shard = (max_iteration_for_open_shards==0)
-    for shard in get_shards(streams_client, stream_arn,open_shard):
+    # if we are running dynamo db for open shards too
+    get_open_shard = (max_iteration_for_open_shards==0)
+    for shard in get_shards(streams_client, stream_arn,get_open_shard):
         found_shards.append(shard['ShardId'])
         # Only sync shards which we have not fully synced already
         if shard['ShardId'] not in finished_shard_bookmarks:
