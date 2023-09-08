@@ -12,7 +12,7 @@ SDC_DELETED_AT = "_sdc_deleted_at"
 MAX_TRIES = 5
 FACTOR = 2
 
-def get_shards(streams_client, stream_arn,found_max_iteration_for_open_shards):
+def get_shards(streams_client, stream_arn,need_open_shards):
     '''
     Yields closed shards.
     previously before datazip :
@@ -35,7 +35,7 @@ def get_shards(streams_client, stream_arn,found_max_iteration_for_open_shards):
         stream_info = streams_client.describe_stream(**params)['StreamDescription']
 
         for shard in stream_info['Shards']:
-            if found_max_iteration_for_open_shards:
+            if need_open_shards:
                 yield shard
             else:
                 if shard['SequenceNumberRange'].get('EndingSequenceNumber'):
@@ -65,14 +65,15 @@ def get_shard_records(streams_client, stream_arn, shard, sequence_number,max_ite
         'ShardId': shard['ShardId'],
         'ShardIteratorType': iterator_type
     }
-    print(f"Setting max_iteration_for_open_shards to {max_iteration_for_open_shards}")
+    if max_iteration_for_open_shards!=0:
+        LOGGER.info("Setting max_iteration_for_open_shards to: %d",max_iteration_for_open_shards)
     if sequence_number:
         params['SequenceNumber'] = sequence_number
 
     shard_iterator = streams_client.get_shard_iterator(**params)['ShardIterator']
     while shard_iterator:
         records = streams_client.get_records(ShardIterator=shard_iterator, Limit=1000)
-        # for open shards the loop will not so breaking once iterating limit become 0
+        # for open shards the loop will not break so breaking once iterating limit become 0
         if max_iteration_for_open_shards==0 and not shard['SequenceNumberRange'].get('EndingSequenceNumber') :
             break
         max_iteration_for_open_shards-=1
@@ -89,13 +90,12 @@ def sync_shard(shard, seq_number_bookmarks, streams_client, stream_arn, projecti
     for record in get_shard_records(streams_client, stream_arn, shard, seq_number,max_iteration_for_open_shards):
         if record['eventName'] == 'REMOVE':
             record_message = deserializer.deserialize_item(record['dynamodb']['Keys'])
-            # for open shards their can be error of parsing timestamp
-            if not shard['SequenceNumberRange'].get('EndingSequenceNumber'):
+            try:
+                record_message[SDC_DELETED_AT] = singer.utils.strftime(record['dynamodb']['ApproximateCreationDateTime'])
+            except Exception as e :
+                LOGGER.warn("failed to parse datetime, Exception: %s",e)
                 input_datetime = datetime.datetime.strptime(str(record['dynamodb']['ApproximateCreationDateTime']), '%Y-%m-%d %H:%M:%S%z')
-                utc_datetime = input_datetime.astimezone(datetime.timezone.utc)
-                record['dynamodb']['ApproximateCreationDateTime'] = utc_datetime
-
-            record_message[SDC_DELETED_AT] = singer.utils.strftime(record['dynamodb']['ApproximateCreationDateTime'])
+                record_message[SDC_DELETED_AT] = singer.utils.strftime(input_datetime.astimezone(datetime.timezone.utc))
         else:
             record_message = deserializer.deserialize_item(record['dynamodb'].get('NewImage'))
             if record_message is None:
@@ -157,12 +157,9 @@ def sync(config, state, stream):
 
     client = dynamodb.get_client(config)
     # for open shards their will be a continous loop while getting records so to handle that max_iteration_for_open_shards is used
-    found_max_iteration_for_open_shards = False
-    max_iteration_for_open_shards = 1000
-    if config.get('max_iteration_for_open_shards') :
-         # override max_iteration_for_open_shards with config value
-         max_iteration_for_open_shards = config.get('max_iteration_for_open_shards')
-         found_max_iteration_for_open_shards = True
+    max_iteration_for_open_shards = 0
+    if config.get('real_time_data_view') :
+         max_iteration_for_open_shards = 1000
     streams_client = dynamodb.get_stream_client(config)
 
     md_map = metadata.to_map(stream['metadata'])
@@ -216,7 +213,8 @@ def sync(config, state, stream):
     deserializer = deserialize.Deserializer()
 
     rows_synced = 0
-    for shard in get_shards(streams_client, stream_arn,found_max_iteration_for_open_shards):
+    open_shard = (max_iteration_for_open_shards==0)
+    for shard in get_shards(streams_client, stream_arn,open_shard):
         found_shards.append(shard['ShardId'])
         # Only sync shards which we have not fully synced already
         if shard['ShardId'] not in finished_shard_bookmarks:
