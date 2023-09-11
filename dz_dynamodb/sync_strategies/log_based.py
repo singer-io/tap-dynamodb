@@ -66,7 +66,7 @@ def get_shard_records(streams_client, stream_arn, shard, sequence_number,max_ite
         'ShardId': shard['ShardId'],
         'ShardIteratorType': iterator_type
     }
-    if max_iteration_for_open_shards!=0:
+    if max_iteration_for_open_shards!=0 and not shard['SequenceNumberRange'].get('EndingSequenceNumber'):
         LOGGER.info("Setting max_iteration_for_open_shards to: %d",max_iteration_for_open_shards)
     if sequence_number:
         params['SequenceNumber'] = sequence_number
@@ -163,6 +163,7 @@ def sync(config, state, stream):
     max_iteration_for_open_shards = 0
     if config.get('real_time_data_view') :
          max_iteration_for_open_shards = 1000
+         get_open_shard = True
     streams_client = dynamodb.get_stream_client(config)
 
     md_map = metadata.to_map(stream['metadata'])
@@ -216,8 +217,6 @@ def sync(config, state, stream):
     deserializer = deserialize.Deserializer()
 
     rows_synced = 0
-    # if we are running dynamo db for open shards too
-    get_open_shard = (max_iteration_for_open_shards==0)
     for shard in get_shards(streams_client, stream_arn,get_open_shard):
         found_shards.append(shard['ShardId'])
         # Only sync shards which we have not fully synced already
