@@ -1,16 +1,18 @@
 {
   "bookmarks": {
     "clc-stag-machine": {
-      "initial_full_table_complete": true,
       "finished_shards": [
-        "shardId-00000001694329986076-52c93bb2",
-        "shardId-00000001694345218651-2eaeac1e",
-        "shardId-00000001694358494833-bdb0a40e",
-        "shardId-00000001694372776062-adabaeba",
-        "shardId-00000001694387375181-4803f012",
-        "shardId-00000001694400786321-8a2e5b2d"
+        "shardId-00000001694069401517-da60fed8",
+        "shardId-00000001694069401517-da60fed8",
+        "shardId-00000001694069401517-da60fed8"
       ],
-      "success_timestamp": "2023-09-11T09:07:07.067108Z"
+      "version": 1694086154889,
+      "initial_full_table_complete": true,
+      "shard_seq_numbers": {
+        "shardId-00000001694085133752-f7f02371": "679035900000000027586731253"
+      },
+      "success_timestamp": "2023-09-07T11:41:31.779778Z",
+      "last_replication_method": "LOG_BASED"
     }
   },
   "currently_syncing": "clc-stag-machine"
