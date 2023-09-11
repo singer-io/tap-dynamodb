@@ -161,6 +161,7 @@ def sync(config, state, stream):
     client = dynamodb.get_client(config)
     # for open shards their will be a continous loop while getting records so to handle that max_iteration_for_open_shards is used
     max_iteration_for_open_shards = 0
+    get_open_shard = False
     if config.get('real_time_data_view') :
          max_iteration_for_open_shards = 1000
          get_open_shard = True
