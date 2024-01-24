@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.0
+  * Updates to run on python 3.11.7 [#57](https://github.com/singer-io/tap-dynamodb/pull/57)
+
 ## 1.2.3
   * Fix error handling for log-based setup [#50](https://github.com/singer-io/tap-dynamodb/pull/50)
 
