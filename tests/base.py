@@ -6,11 +6,7 @@ import decimal
 import boto3
 from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
 
-import singer
-
-from tap_tester import connections
-from tap_tester import menagerie
-from tap_tester import runner
+from tap_tester import connections, menagerie, runner, LOGGER
 
 ALL_TABLE_NAMES_TO_CLEAR = frozenset({
     'simple_table_1',
@@ -19,8 +15,6 @@ ALL_TABLE_NAMES_TO_CLEAR = frozenset({
     'simple_table_4',
     'com-stitchdata-test-dynamodb-integration-simple_table_1',
 })
-
-LOGGER = singer.get_logger()
 
 
 class TestDynamoDBBase(unittest.TestCase):
