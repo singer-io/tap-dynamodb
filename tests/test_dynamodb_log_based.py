@@ -1,6 +1,6 @@
 from boto3.dynamodb.types import TypeSerializer
 
-from tap_tester import connections, menagerie, runner, LOGGER
+from tap_tester import connections, menagerie, runner
 
 from base import TestDynamoDBBase
 
