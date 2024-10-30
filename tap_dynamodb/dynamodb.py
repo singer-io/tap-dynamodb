@@ -48,7 +48,7 @@ class AssumeRoleProvider():
         )
 
 
-@retry_pattern
+@retry_pattern()
 def setup_aws_client(config):
     proxy_role_arn = "arn:aws:iam::{}:role/{}".format(config['proxy_account_id'].replace('-', ''),config['proxy_role_name'])
     cust_role_arn = "arn:aws:iam::{}:role/{}".format(config['account_id'].replace('-', ''),config['role_name'])
