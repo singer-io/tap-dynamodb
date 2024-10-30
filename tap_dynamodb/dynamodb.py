@@ -7,7 +7,8 @@ from botocore.credentials import (
     AssumeRoleCredentialFetcher,
     CredentialResolver,
     DeferredRefreshableCredentials,
-    JSONFileCache
+    JSONFileCache,
+    RefreshableCredentials
 )
 from botocore.session import Session
 from botocore.config import Config
@@ -47,35 +48,62 @@ class AssumeRoleProvider():
         )
 
 
-@retry_pattern()
+@retry_pattern
 def setup_aws_client(config):
-    """
-    Setup the aws session for making the API calls
-    """
-    role_arn = "arn:aws:iam::{}:role/{}".format(config['account_id'].replace('-', ''),
-                                                config['role_name'])
+    proxy_role_arn = "arn:aws:iam::{}:role/{}".format(config['proxy_account_id'].replace('-', ''),config['proxy_role_name'])
+    cust_role_arn = "arn:aws:iam::{}:role/{}".format(config['account_id'].replace('-', ''),config['role_name'])
 
-    session = Session()
-    fetcher = AssumeRoleCredentialFetcher(
-        session.create_client,
-        session.get_credentials(),
-        role_arn,
+    # Step 1: Assume Role in Account Proxy and set up refreshable session
+    session_proxy = Session()
+    fetcher_proxy = AssumeRoleCredentialFetcher(
+        client_creator=session_proxy.create_client,
+        source_credentials=session_proxy.get_credentials(),
+        role_arn=proxy_role_arn,
         extra_args={
             'DurationSeconds': 3600,
-            'RoleSessionName': 'TapDynamodDB',
+            'RoleSessionName': 'ProxySession',
+            'ExternalId': config['proxy_external_id']
+        },
+        cache=JSONFileCache()
+    )
+
+    # Refreshable credentials for Account Proxy
+    refreshable_credentials_proxy = RefreshableCredentials.create_from_metadata(
+        metadata=fetcher_proxy.fetch_credentials(),
+        refresh_using=fetcher_proxy.fetch_credentials,
+        method="sts-assume-role"
+    )
+
+    # Step 2: Use Proxy Account's session to assume Role in Customer Account
+    session_cust = Session()
+    fetcher_cust = AssumeRoleCredentialFetcher(
+        client_creator=session_cust.create_client,
+        source_credentials=refreshable_credentials_proxy,
+        role_arn=cust_role_arn,
+        extra_args={
+            'DurationSeconds': 3600,
+            'RoleSessionName': 'CustSession',
             'ExternalId': config['external_id']
         },
         cache=JSONFileCache()
     )
 
-    refreshable_session = Session()
-    refreshable_session.register_component(
+    # # Refreshable credentials for Account Customer
+    # refreshable_credentials_c = RefreshableCredentials.create_from_metadata(
+    #     metadata=fetcher_cust.fetch_credentials(),
+    #     refresh_using=fetcher_cust.fetch_credentials,
+    #     method="sts-assume-role"
+    # )
+
+    # Set up refreshable session for Customer Account
+    refreshable_session_cust = Session()
+    refreshable_session_cust.register_component(
         'credential_provider',
-        CredentialResolver([AssumeRoleProvider(fetcher)])
+        CredentialResolver([AssumeRoleProvider(fetcher_cust)])
     )
 
-    LOGGER.info("Attempting to assume_role on RoleArn: %s", role_arn)
-    boto3.setup_default_session(botocore_session=refreshable_session)
+    LOGGER.info("Attempting to assume_role on RoleArn: %s", cust_role_arn)
+    boto3.setup_default_session(botocore_session=refreshable_session_cust)
 
 def get_request_timeout(config):
     # if request_timeout is other than 0,"0" or "" then use request_timeout
