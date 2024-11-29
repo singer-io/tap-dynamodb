@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.4.0
+  * Adds proxy AWS Account as a middleware to mask the Qlik AWS account ID [#59](https://github.com/singer-io/tap-dynamodb/pull/59)
+
 ## 1.3.0
   * Updates to run on python 3.11.7 [#57](https://github.com/singer-io/tap-dynamodb/pull/57)
 
