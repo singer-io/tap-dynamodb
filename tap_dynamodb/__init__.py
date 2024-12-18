@@ -2,7 +2,6 @@ import json
 import sys
 import time
 
-from terminaltables import AsciiTable
 import singer
 from singer import metadata
 from tap_dynamodb.discover import discover_streams
@@ -57,7 +56,7 @@ def do_sync(config, catalog, state):
         sync_times[stream_name] = time.time() - start_time
         LOGGER.info("%s: Completed sync (%s rows)", stream_name, counts[stream_name])
 
-    LOGGER.info(get_sync_summary(catalog, counts, sync_times))
+    get_sync_summary(catalog, counts, sync_times)
     LOGGER.info('Done syncing.')
 
 def get_sync_summary(catalog, counts, times):
@@ -84,10 +83,10 @@ def get_sync_summary(catalog, counts, times):
                '{:.1f} records/second'.format(stream_count/stream_time)]
         rows.append(row)
 
-    data = headers + rows
-    table = AsciiTable(data, title='Sync Summary')
-
-    return '\n\n' + table.table
+    LOGGER.info("\n**** Sync Summary:")
+    LOGGER.info(next(iter(headers), None))
+    for row in rows:
+        LOGGER.info(row)
 
 
 @singer.utils.handle_top_exception(LOGGER)
