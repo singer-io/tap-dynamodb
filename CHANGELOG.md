@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.4.0
+  * Adds proxy AWS Account support [#59](https://github.com/singer-io/tap-dynamodb/pull/59)
+
 ## 1.3.1
   * Removes deprecated terminaltables dependency [#60](https://github.com/singer-io/tap-dynamodb/pull/60)
 

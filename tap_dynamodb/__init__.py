@@ -5,7 +5,7 @@ import time
 import singer
 from singer import metadata
 from tap_dynamodb.discover import discover_streams
-from tap_dynamodb.dynamodb import setup_aws_client
+from tap_dynamodb.dynamodb import setup_aws_client, setup_aws_client_with_proxy
 from tap_dynamodb.sync import sync_stream
 
 
@@ -96,7 +96,13 @@ def main():
 
     # TODO Is this the right way to do this? It seems bad
     if not config.get('use_local_dynamo'):
-        setup_aws_client(config)
+        # Check if 'proxy_account_id' and 'proxy_role_name' are present in config
+        if config.get('proxy_account_id') and config.get('proxy_role_name'):
+            # If both are present, call setup_aws_client_with_proxy
+            setup_aws_client_with_proxy(config)
+        else:
+            # Otherwise, call setup_aws_client
+            setup_aws_client(config)
 
     if args.discover:
         do_discover(args.config)
