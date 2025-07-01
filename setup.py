@@ -11,7 +11,7 @@ setup(
     py_modules=["tap_dynamodb"],
     install_requires=[
         'boto3==1.14.9',
-        "singer-python==6.0.0",
+        "singer-python==6.0.1",
         'backoff==2.2.1',
     ],
     extras_require={
