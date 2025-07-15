@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.4.1
+  * Bump dependency versions for twistlock compliance [#61](https://github.com/singer-io/tap-dynamodb/pull/61)
+
 ## 1.4.0
   * Adds proxy AWS Account support [#59](https://github.com/singer-io/tap-dynamodb/pull/59)
 
