@@ -5,7 +5,7 @@ orbs:
 jobs:
   build:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester-uv
       - image: amazon/dynamodb-local
         entrypoint: ["java", "-Xmx1G", "-jar", "DynamoDBLocal.jar"]
     steps:
@@ -14,21 +14,23 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            virtualenv -p python3 /usr/local/share/virtualenvs/tap-dynamodb
+            uv venv --python 3.11 /usr/local/share/virtualenvs/tap-dynamodb
             source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
-            pip install .[dev]
-            pip install pytest-cov
+            uv pip install .[dev]
+            uv pip install pytest-cov
       - run:
           name: 'pylint'
           command: |
+            apt-get update && apt-get install -y make
             source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
             make lint
       - run:
           name: 'Unit Tests'
           command: |
             source /usr/local/share/virtualenvs/tap-dynamodb/bin/activate
-            pip install nose2 parameterized nose2[coverage_plugin]>=0.6.5
-            nose2 --with-coverage -v -s tests/unittests
+            uv pip install pytest coverage parameterized
+            coverage run -m pytest tests/unittests
+            coverage html
       - store_test_results:
           path: test_output/report.xml
       - store_artifacts:
@@ -36,9 +38,10 @@ jobs:
       - run:
           name: 'Tap Tester'
           command: |
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            uv pip install --upgrade awscli
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox tap-tester.env
             source tap-tester.env
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-dynamodb tests
       - slack/notify-on-failure:
           only_for_branches: master

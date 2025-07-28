@@ -15,7 +15,7 @@ class TestDeserializer(unittest.TestCase):
         deserializer = deserialize.Deserializer()
         output = deserializer.apply_projection(mock_record, mock_projections)
         # verify that we get empty list if the data is not found in the record
-        self.assertEquals(output, {'Artist': 'No One You Know5', 'metadata': []})
+        self.assertEqual(output, {'Artist': 'No One You Know5', 'metadata': []})
 
     def test_projection_expression_all_list_data_not_found_positive(self):
         '''
@@ -29,7 +29,7 @@ class TestDeserializer(unittest.TestCase):
         deserializer = deserialize.Deserializer()
         output = deserializer.apply_projection(mock_record, mock_projections)
         # verify that we get empty list if the data is not found in the record
-        self.assertEquals(output, {'Artist': 'No One You Know5', 'metadata': ['test']})
+        self.assertEqual(output, {'Artist': 'No One You Know5', 'metadata': ['test']})
 
     def test_projection_expression_some_list_data_not_found(self):
         '''
@@ -43,7 +43,7 @@ class TestDeserializer(unittest.TestCase):
         deserializer = deserialize.Deserializer()
         output = deserializer.apply_projection(mock_record, mock_projections)
         # verify that we only get the available data in the list when user expect the data that is not available
-        self.assertEquals(output, {'Artist': 'No One You Know5', 'metadata': ['test1']})
+        self.assertEqual(output, {'Artist': 'No One You Know5', 'metadata': ['test1']})
 
     def test_projection_expression_some_list_data_not_found_positive(self):
         '''
@@ -57,7 +57,7 @@ class TestDeserializer(unittest.TestCase):
         deserializer = deserialize.Deserializer()
         output = deserializer.apply_projection(mock_record, mock_projections)
         # verify that we only get the available data in the list when user expect the data that is not available
-        self.assertEquals(output, {'Artist': 'No One You Know5', 'metadata': ['test1', 'test2']})
+        self.assertEqual(output, {'Artist': 'No One You Know5', 'metadata': ['test1', 'test2']})
 
     def test_projection_expression_parent_child_data_list(self):
         '''
@@ -71,7 +71,7 @@ class TestDeserializer(unittest.TestCase):
         deserializer = deserialize.Deserializer()
         output = deserializer.apply_projection(mock_record, mock_projections)
         # verify that we get empty dict when the element in the list is parent element and it is not found
-        self.assertEquals(output, {'Artist': 'No One You Know5', 'metadata': [{}]})
+        self.assertEqual(output, {'Artist': 'No One You Know5', 'metadata': [{}]})
 
     def test_projection_expression_parent_child_data_list_positive(self):
         '''
@@ -85,7 +85,7 @@ class TestDeserializer(unittest.TestCase):
         deserializer = deserialize.Deserializer()
         output = deserializer.apply_projection(mock_record, mock_projections)
         # verify that we get empty dict when the element in the list is parent element and it is not found
-        self.assertEquals(output, {'Artist': 'No One You Know5', 'metadata': [{'Age': 'Test'}]})
+        self.assertEqual(output, {'Artist': 'No One You Know5', 'metadata': [{'Age': 'Test'}]})
 
     def test_projection_expression_parent_child_data_dictionary(self):
         '''
@@ -99,7 +99,7 @@ class TestDeserializer(unittest.TestCase):
         deserializer = deserialize.Deserializer()
         output = deserializer.apply_projection(mock_record, mock_projections)
         # veriy that we get None when the parent data is not found
-        self.assertEquals(output, {'Artist': 'No One You Know5', 'metadata': {}})
+        self.assertEqual(output, {'Artist': 'No One You Know5', 'metadata': {}})
 
     def test_projection_expression_parent_child_data_dictionary_positive(self):
         '''
@@ -113,7 +113,7 @@ class TestDeserializer(unittest.TestCase):
         deserializer = deserialize.Deserializer()
         output = deserializer.apply_projection(mock_record, mock_projections)
         # veriy that we get None when the parent data is not found
-        self.assertEquals(output, {'Artist': 'No One You Know5', 'metadata': {'inner_metadata': 'Test'}})
+        self.assertEqual(output, {'Artist': 'No One You Know5', 'metadata': {'inner_metadata': 'Test'}})
 
     def test_projection_expression_parent_child_data_list_different_order(self):
         '''
@@ -127,4 +127,4 @@ class TestDeserializer(unittest.TestCase):
         deserializer = deserialize.Deserializer()
         output = deserializer.apply_projection(mock_record, mock_projections)
         # veriy that we get no error when add list projection in decreasing order and it is not found
-        self.assertEquals(output, {'metadata': [{'inner_metadata': 'Test'}]})
+        self.assertEqual(output, {'metadata': [{'inner_metadata': 'Test'}]})

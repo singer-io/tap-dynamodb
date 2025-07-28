@@ -98,7 +98,7 @@ class DynamoDBLogBasedParentChildData(TestDynamoDBBase):
                 # verify that we get 'None' for child data when parent data is not found
                 self.assertIsNone(record.get('map_field').get('map_entry_1'))
                 # verify that we only get the available data if the data at a particular index is not found
-                self.assertEquals(record.get('test_list_1'), [])
-                self.assertEquals(record.get('test_list_2'), ['list_2_data'])
+                self.assertEqual(record.get('test_list_1'), [])
+                self.assertEqual(record.get('test_list_2'), ['list_2_data'])
                 # verify that we got empty map if the parent data at a particular index is not found for child data
-                self.assertEquals(record.get('test_list_3'), [{}])
+                self.assertEqual(record.get('test_list_3'), [{}])
