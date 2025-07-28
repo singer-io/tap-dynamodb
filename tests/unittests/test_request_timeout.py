@@ -50,7 +50,7 @@ class TestBackoffError(unittest.TestCase):
         """
         with self.assertRaises(ReadTimeoutError):
             discover.discover_streams({"region_name": "dummy", "use_local_dynamo": "true"})
-        self.assertEquals(mock_client.call_count, 5)
+        self.assertEqual(mock_client.call_count, 5)
 
     @mock.patch('tap_dynamodb.dynamodb.get_client',side_effect=mock_get_client)
     def test_scan_table_sync_read_timeout_and_backoff(self, mock_client):
@@ -60,7 +60,7 @@ class TestBackoffError(unittest.TestCase):
         with self.assertRaises(ReadTimeoutError):
             full_table.sync({"region_name": "dummy", "use_local_dynamo": "true"}, {}, {"tap_stream_id":"dummy_stream", "metadata": ""})
         self.assertEqual(mock_client.call_count, 5)
-    
+
     @mock.patch('tap_dynamodb.dynamodb.get_client',side_effect=mock_get_client)
     @mock.patch('tap_dynamodb.dynamodb.get_stream_client',side_effect=mock_get_client)
     def test_get_records_sync_read_timeout_and_backoff(self, mock_stream_client, mock_client):
@@ -79,7 +79,7 @@ class TestBackoffError(unittest.TestCase):
         """
         with self.assertRaises(ConnectTimeoutError):
             discover.discover_streams({"region_name": "dummy", "use_local_dynamo": "true"})
-        self.assertEquals(mock_client.call_count, 5)
+        self.assertEqual(mock_client.call_count, 5)
 
     @mock.patch('tap_dynamodb.dynamodb.get_client',side_effect=mock_get_client_connect_timeout)
     def test_scan_table_sync_connect_timeout_and_backoff(self, mock_client):
@@ -89,7 +89,7 @@ class TestBackoffError(unittest.TestCase):
         with self.assertRaises(ConnectTimeoutError):
             full_table.sync({"region_name": "dummy", "use_local_dynamo": "true"}, {}, {"tap_stream_id":"dummy_stream", "metadata": ""})
         self.assertEqual(mock_client.call_count, 5)
-    
+
     @mock.patch('tap_dynamodb.dynamodb.get_client',side_effect=mock_get_client_connect_timeout)
     @mock.patch('tap_dynamodb.dynamodb.get_stream_client',side_effect=mock_get_client_connect_timeout)
     def test_get_records_sync_connect_timeout_and_backoff(self, mock_stream_client, mock_client):
@@ -108,7 +108,7 @@ class TestBackoffError(unittest.TestCase):
         """
         with self.assertRaises(ReadTimeoutError):
             log_based.get_initial_bookmarks({"region_name": "dummy", "use_local_dynamo": "true"}, {}, "dummy_table")
-        self.assertEquals(mock_client.call_count, 5)
+        self.assertEqual(mock_client.call_count, 5)
 
 class TestRequestTimeoutValue(unittest.TestCase):
     '''
@@ -118,7 +118,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
     @mock.patch('boto3.client')
     @mock.patch("tap_dynamodb.dynamodb.Config")
     def test_config_provided_request_timeout(self, mock_config, mock_client):
-        """ 
+        """
             Unit tests to ensure that request timeout is set based on config value
         """
         timeout_value = 100
@@ -129,7 +129,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
     @mock.patch('boto3.client')
     @mock.patch("tap_dynamodb.dynamodb.Config")
     def test_default_value_request_timeout(self, mock_config, mock_client):
-        """ 
+        """
             Unit tests to ensure that request timeout is set based default value
         """
         config = {"region_name": "dummy_region"}
@@ -139,7 +139,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
     @mock.patch('boto3.client')
     @mock.patch("tap_dynamodb.dynamodb.Config")
     def test_config_provided_empty_request_timeout(self, mock_config, mock_client):
-        """ 
+        """
             Unit tests to ensure that request timeout is set based on default value if empty value is given in config
         """
         config = {"region_name": "dummy_region", "request_timeout": ""}
@@ -149,7 +149,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
     @mock.patch('boto3.client')
     @mock.patch("tap_dynamodb.dynamodb.Config")
     def test_config_provided_string_request_timeout(self, mock_config, mock_client):
-        """ 
+        """
             Unit tests to ensure that request timeout is set based on config string value
         """
         config = {"region_name": "dummy_region", "request_timeout": "100"}
@@ -159,7 +159,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
     @mock.patch('boto3.client')
     @mock.patch("tap_dynamodb.dynamodb.Config")
     def test_config_provided_float_request_timeout(self, mock_config, mock_client):
-        """ 
+        """
             Unit tests to ensure that request timeout is set based on config float value
         """
         timeout_value = 100.8
@@ -170,7 +170,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
     @mock.patch('boto3.client')
     @mock.patch("tap_dynamodb.dynamodb.Config")
     def test_stream_config_provided_request_timeout(self, mock_config, mock_client):
-        """ 
+        """
             Unit tests to ensure that request timeout is set based on config value
         """
         timeout_value = 100
@@ -181,7 +181,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
     @mock.patch('boto3.client')
     @mock.patch("tap_dynamodb.dynamodb.Config")
     def test_stream_default_value_request_timeout(self, mock_config, mock_client):
-        """ 
+        """
             Unit tests to ensure that request timeout is set based default value
         """
         config = {"region_name": "dummy_region"}
@@ -191,7 +191,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
     @mock.patch('boto3.client')
     @mock.patch("tap_dynamodb.dynamodb.Config")
     def test_stream_config_provided_empty_request_timeout(self, mock_config, mock_client):
-        """ 
+        """
             Unit tests to ensure that request timeout is set based on default value if empty value is given in config
         """
         config = {"region_name": "dummy_region", "request_timeout": ""}
@@ -201,7 +201,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
     @mock.patch('boto3.client')
     @mock.patch("tap_dynamodb.dynamodb.Config")
     def test_stream_config_provided_string_request_timeout(self, mock_config, mock_client):
-        """ 
+        """
             Unit tests to ensure that request timeout is set based on config string value
         """
         config = {"region_name": "dummy_region", "request_timeout": "100"}
@@ -211,7 +211,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
     @mock.patch('boto3.client')
     @mock.patch("tap_dynamodb.dynamodb.Config")
     def test_stream_config_provided_float_request_timeout(self, mock_config, mock_client):
-        """ 
+        """
             Unit tests to ensure that request timeout is set based on config float value
         """
         timeout_value = 100.8
