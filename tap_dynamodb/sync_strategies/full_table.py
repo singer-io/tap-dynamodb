@@ -13,10 +13,20 @@ def scan_table(table_name, projection, expression, last_evaluated_key, config):
     '''
     Get all the records of the table by using `scan()` method with projection expression parameters
     '''
+
+    # parallelize large scans
+    parallel_segment = config.get("parallel_segment", None)
+    parallel_totalsegments = config.get("parallel_totalsegments", None)
+
     scan_params = {
         'TableName': table_name,
         'Limit': 1000
     }
+    
+    # add the parallel segment and the total number of segments in the parameters to the `scan`
+    if parallel_segment and parallel_totalsegments:
+        scan_params["Segment"] = int(parallel_segment)
+        scan_params["TotalSegments"] = int(parallel_totalsegments)
 
     # add the projection expression in the parameters to the `scan`
     if projection is not None and projection != '':
