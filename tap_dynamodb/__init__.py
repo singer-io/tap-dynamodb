@@ -51,6 +51,14 @@ def do_sync(config, catalog, state):
         key_properties = metadata.get(mdata, (), 'table-key-properties')
         singer.write_schema(stream_name, stream['schema'], key_properties)
 
+        filter_expression = metadata.get(mdata, (), 'FilterExpression')
+        filter_value = metadata.get(mdata, (), 'ExpressionAttributeValues')
+        scan_params = {}
+        if filter_expression and filter_value:
+            scan_params = { 'FilterExpression': filter_expression, 'ExpressionAttributeValues': json.loads(filter_value) }
+            config = { **config, **scan_params }
+            LOGGER.info("Applying scan_params: %s for stream: %s", str(scan_params), stream_name)
+
         LOGGER.info("%s: Starting sync", stream_name)
         counts[stream_name] = sync_stream(config, state, stream)
         sync_times[stream_name] = time.time() - start_time
